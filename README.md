@@ -2,18 +2,40 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## Prerequisites
+
+Install the tooling before running any project scripts:
+
+1. **Node.js + npm** (use the latest LTS release—Expo currently recommends Node 18+).
+
+   ```bash
+   # via nvm (https://github.com/nvm-sh/nvm)
+   nvm install --lts
+   nvm use --lts
+   node -v
+   npm -v
+   ```
+
+2. **PNPM** (preferred package manager for this repo).
+
+   ```bash
+   corepack enable         # ships with recent Node versions
+   corepack prepare pnpm@latest --activate
+   pnpm -v
+   ```
+
 ## Get started
 
 1. Install dependencies
 
    ```bash
-   npm install
+   pnpm install --frozen-lockfile
    ```
 
 2. Start the app
 
    ```bash
-   npx expo start
+   pnpm start
    ```
 
 In the output, you'll find options to open the app in a
@@ -30,7 +52,7 @@ You can start developing by editing the files inside the **app** directory. This
 When you're ready, run:
 
 ```bash
-npm run reset-project
+pnpm run reset-project
 ```
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
