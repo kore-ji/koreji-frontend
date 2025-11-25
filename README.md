@@ -47,6 +47,27 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Project structure
+
+```
+.
+├── app/                     # Expo Router entry points (tabs, layouts, modals)
+│   ├── (tabs)/              # Main navigation shell exposed to iOS/Android/Web
+│   ├── _layout.tsx          # Shared stack/tab layout wrapper
+│   └── modal.tsx            # Example modal route wired into the router
+├── components/              # Shared UI + feature components
+│   ├── themed-text.tsx      # Typography primitive bound to theme tokens
+│   ├── themed-view.tsx      # Surface primitive enforcing design system colors
+│   └── ui/                  # Low-level building blocks (icon-symbol.*, collapsible)
+├── constants/               # Theme tokens + runtime constants (`theme.ts`, etc.)
+├── hooks/                   # Reusable logic (gestures, data fetching, derived state)
+├── assets/                  # Images, fonts, and other bundled static media
+├── scripts/                 # Node helpers for maintenance + CI automation
+├── .github/workflows/       # CI definitions (lint + typecheck pipeline)
+├── package.json             # Expo configuration and project scripts
+└── tsconfig.json            # TypeScript configuration consumed by Expo/tooling
+```
+
 ## Quality checks
 
 Every pull request and push to `main` triggers the GitHub Actions workflow defined in `.github/workflows/ci.yml`. The pipeline installs dependencies with PNPM and runs:
