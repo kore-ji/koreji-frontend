@@ -127,10 +127,10 @@ export default function HomeScreen() {
   const handleRecommend = () => {
     // Placeholder for recommendation logic
     console.log(actions.recommendLog, {
-      time: { hours, minutes },
+      time: `${hours * 60 + minutes}`, // total minutes
       place: selectedPlace,
       mode: selectedMode,
-      tools: selectedTool,
+      tools: selectedTool.join(', '),
     });
   };
 
