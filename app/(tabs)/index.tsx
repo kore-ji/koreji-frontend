@@ -21,15 +21,38 @@ export default function HomeScreen() {
   };
 
   const decrementHours = () => {
-    setHours((prev) => Math.max(0, prev - 1));
+    setHours((prevHours) => {
+      if (prevHours <= 0 && minutes <= 0) {
+        return 0;
+      }
+      return Math.max(0, prevHours - 1);
+    });
   };
 
   const incrementMinutes = () => {
-    setMinutes((prev) => prev + 1);
+    setMinutes((prev) => {
+      const newMinutes = prev + 1;
+      if (newMinutes >= 60) {
+        setHours((prevHours) => prevHours + 1);
+        return 0;
+      }
+      return newMinutes;
+    });
   };
 
   const decrementMinutes = () => {
-    setMinutes((prev) => Math.max(0, prev - 1));
+    setMinutes((prevMinutes) => {
+      if (prevMinutes <= 0) {
+        if (hours <= 0) {
+          // Both hours and minutes are 0, don't decrease
+          return 0;
+        }
+        // Minutes is 0 but hours > 0, decrease hours and set minutes to 59
+        setHours((prevHours) => Math.max(0, prevHours - 1));
+        return 59;
+      }
+      return prevMinutes - 1;
+    });
   };
 
   const handleRecommend = () => {
