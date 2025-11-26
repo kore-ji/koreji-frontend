@@ -126,7 +126,12 @@ export default function HomeScreen() {
 
   const handleRecommend = () => {
     // Placeholder for recommendation logic
-    console.log(actions.recommendLog, { hours, minutes });
+    console.log(actions.recommendLog, {
+      time: { hours, minutes },
+      place: selectedPlace,
+      mode: selectedMode,
+      tools: selectedTool,
+    });
   };
 
   return (
