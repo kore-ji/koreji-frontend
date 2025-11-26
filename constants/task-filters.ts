@@ -4,10 +4,10 @@
 
 export enum TaskMode {
   NO_SELECT = 'No select',
-  RELAX = '放鬆',
-  FOCUS = '專注',
-  EXERCISE = '運動',
-  SOCIAL = '社交',
+  RELAX = 'Relax',
+  FOCUS = 'Focus',
+  EXERCISE = 'Exercise',
+  SOCIAL = 'Social',
 }
 
 export enum TaskPlace {
