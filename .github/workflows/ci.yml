@@ -45,17 +45,23 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
+      - name: Run type checks
+        run: pnpm typecheck
+
       - name: Start Expo web server
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
         run: |
           pnpm exec expo start --web --non-interactive --port 8081 >/tmp/expo-web.log 2>&1 &
           echo $! > expo_web.pid
 
       - name: Wait for Expo web server
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
         run: |
           timeout 90 bash -c 'until curl -sf http://127.0.0.1:8081 >/dev/null; do sleep 3; done'
 
-      - name: Run type checks + Playwright suite
-        run: pnpm test
+      - name: Run Playwright suite
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+        run: pnpm test:e2e
 
       - name: Stop Expo web server (always)
         if: always()
