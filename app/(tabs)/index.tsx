@@ -141,7 +141,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
-        <Text style={styles.headerText}>{headerTitle}</Text>
+        <Text style={styles.headerText} testID="home-header-title">
+          {headerTitle}
+        </Text>
 
         {/* Time Input Widget */}
         <View style={styles.timeContainer}>
@@ -152,6 +154,7 @@ export default function HomeScreen() {
                 styles.circleButton,
                 (pressed || (Platform.OS === 'web' && hoursIncHovered)) && styles.circleButtonPressed,
               ]}
+              testID="increment-hours"
               onPress={incrementHours}
               onPressIn={() =>
                 startContinuousAction(incrementHours, hoursIncTimeoutRef, hoursIncIntervalRef)
@@ -164,13 +167,16 @@ export default function HomeScreen() {
               <Ionicons name="chevron-up" size={20} color="#333333" />
             </Pressable>
             <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{formatTime(hours)}</Text>
+              <Text style={styles.timeValue} testID="hours-value">
+                {formatTime(hours)}
+              </Text>
             </View>
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
                 (pressed || (Platform.OS === 'web' && hoursDecHovered)) && styles.circleButtonPressed,
               ]}
+              testID="decrement-hours"
               onPress={decrementHours}
               onPressIn={() =>
                 startContinuousAction(decrementHours, hoursDecTimeoutRef, hoursDecIntervalRef)
@@ -192,6 +198,7 @@ export default function HomeScreen() {
                 styles.circleButton,
                 (pressed || (Platform.OS === 'web' && minutesIncHovered)) && styles.circleButtonPressed,
               ]}
+              testID="increment-minutes"
               onPress={incrementMinutes}
               onPressIn={() =>
                 startContinuousAction(
@@ -208,13 +215,16 @@ export default function HomeScreen() {
               <Ionicons name="chevron-up" size={20} color="#333333" />
             </Pressable>
             <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{formatTime(minutes)}</Text>
+              <Text style={styles.timeValue} testID="minutes-value">
+                {formatTime(minutes)}
+              </Text>
             </View>
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
                 (pressed || (Platform.OS === 'web' && minutesDecHovered)) && styles.circleButtonPressed,
               ]}
+              testID="decrement-minutes"
               onPress={decrementMinutes}
               onPressIn={() =>
                 startContinuousAction(
@@ -260,6 +270,7 @@ export default function HomeScreen() {
         {/* Main Action Button */}
         <TouchableOpacity
           style={styles.actionButton}
+          testID="recommend-button"
           onPress={handleRecommend}
           activeOpacity={0.8}
         >

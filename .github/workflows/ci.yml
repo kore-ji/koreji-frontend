@@ -16,6 +16,7 @@ concurrency:
 
 env:
   CI: true
+  PLAYWRIGHT_BASE_URL: http://127.0.0.1:8081
 
 jobs:
   quality-checks:
@@ -35,6 +36,21 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - name: Detect E2E-impacting changes
+        id: e2e-changes
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            e2e:
+              - 'app/**/*.ts'
+              - 'app/**/*.tsx'
+              - 'tests/e2e/**/*.ts'
+              - 'tests/e2e/**/*.tsx'
+              - 'playwright.config.ts'
+              - 'scripts/**'
+              - '.github/workflows/ci.yml'
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -42,4 +58,35 @@ jobs:
         run: pnpm lint
 
       - name: Run type checks
-        run: pnpm test
+        run: pnpm typecheck
+
+      - name: Install Playwright browsers
+        if: ${{ steps.e2e-changes.outputs.e2e == 'true' }}
+        run: pnpm exec playwright install --with-deps
+
+      - name: Start Expo web server
+        if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && steps.e2e-changes.outputs.e2e == 'true' }}
+        run: |
+          pnpm exec expo start --web --non-interactive --port 8081 >/tmp/expo-web.log 2>&1 &
+          echo $! > expo_web.pid
+
+      - name: Wait for Expo web server
+        if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && steps.e2e-changes.outputs.e2e == 'true' }}
+        run: |
+          timeout 90 bash -c 'until curl -sf http://127.0.0.1:8081 >/dev/null; do sleep 3; done'
+
+      - name: Run Playwright suite
+        if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && steps.e2e-changes.outputs.e2e == 'true' }}
+        run: pnpm test:e2e
+
+      - name: Stop Expo web server (always)
+        if: always()
+        run: |
+          if [ -f expo_web.pid ]; then
+            kill "$(cat expo_web.pid)" || true
+            rm -f expo_web.pid
+          fi
+          if [ -f /tmp/expo-web.log ]; then
+            echo "---- Expo web server log ----"
+            tail -n 200 /tmp/expo-web.log || true
+          fi

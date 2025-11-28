@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -44,3 +45,7 @@ app-example
 
 # VSCode
 .vscode/
+
+# Playwright
+tests/.playwright-output/
+playwright-report/

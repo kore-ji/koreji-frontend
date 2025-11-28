@@ -8,9 +8,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "postinstall": "node ./scripts/copy-env.mjs",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck"
+    "test": "pnpm run typecheck && pnpm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -33,17 +36,19 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
-    "react-native-worklets": "0.5.1",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-web": "~0.21.0"
+    "react-native-web": "~0.21.0",
+    "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2",
+    "dotenv": "^17.2.3",
     "eslint": "^9.25.0",
-    "eslint-config-expo": "~10.0.0"
+    "eslint-config-expo": "~10.0.0",
+    "typescript": "~5.9.2"
   },
   "private": true,
   "packageManager": "pnpm@10.23.0+sha512.21c4e5698002ade97e4efe8b8b4a89a8de3c85a37919f957e7a0f30f38fbc5bbdd05980ffe29179b2fb6e6e691242e098d945d1601772cad0fef5fb6411e2a4b"

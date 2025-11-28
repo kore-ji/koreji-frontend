@@ -73,9 +73,34 @@ You can start developing by editing the files inside the **app** directory. This
 Every pull request and push to `main` triggers the GitHub Actions workflow defined in `.github/workflows/ci.yml`. The pipeline installs dependencies with PNPM and runs:
 
 - `pnpm lint` – Expo ESLint rules via `expo lint`.
-- `pnpm test` – currently runs TypeScript `--noEmit` checks through the `typecheck` script.
+- `pnpm test` – runs TypeScript `--noEmit` checks and then executes the Playwright `test:e2e` suite (requires the Expo web server running at `PLAYWRIGHT_BASE_URL`).
 
-Run the same commands locally before opening a PR to catch issues early.
+Run the same commands locally before opening a PR to catch issues early. When running `pnpm test` locally, ensure `pnpm web` (or another server that matches your `PLAYWRIGHT_BASE_URL`) is already serving the app.
+
+### End-to-end tests (Playwright)
+
+Playwright powers our browser smoke tests under `tests/e2e/`. To run them locally:
+
+1. After `pnpm install` completes, the `postinstall` script copies `.env.example` to `.env` if you don't have one yet. You can rerun it manually whenever needed:
+
+   ```bash
+   pnpm postinstall
+   # edit .env if you serve the app on a different port
+   ```
+
+2. Start the Expo web server in one terminal:
+
+   ```bash
+   pnpm web
+   ```
+
+3. In another terminal, run the tests:
+
+   ```bash
+   pnpm test:e2e
+   ```
+
+   Use `pnpm test:e2e:ui` for Playwright's UI mode while authoring new specs. Override `PLAYWRIGHT_BASE_URL` inline if needed (e.g., `PLAYWRIGHT_BASE_URL=https://staging.example.com pnpm test:e2e`). CI environments should ensure the Expo web app is reachable and the env var is set before invoking the Playwright scripts.
 
 ## Learn more about Expo
 
