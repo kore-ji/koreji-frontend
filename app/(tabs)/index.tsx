@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TaskMode, TaskPlace, TaskTool } from '@/constants/task-filters';
 import { HOME_SCREEN_STRINGS } from '@/constants/strings/home';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
+import { TasksBottomSheet } from '@/components/ui/simple-task-list';
 
 export default function HomeScreen() {
   const {
@@ -125,17 +126,26 @@ export default function HomeScreen() {
   };
 
   const handleRecommend = () => {
-    // Placeholder for recommendation logic
-    console.log(actions.recommendLog, {
-      time: `${hours * 60 + minutes}`, // total minutes
+    // Calculate total time in minutes
+    const totalMinutes = hours * 60 + minutes;
+
+    // Prepare request payload
+    const requestPayload = {
+      time: totalMinutes,
       place: selectedPlace,
       mode: selectedMode,
-      tools: selectedTool.join(', '),
-    });
+      tools: selectedTool.filter((tool) => tool !== TaskTool.NO_SELECT),
+    };
+
+    // Log for debugging
+    console.log(actions.recommendLog, requestPayload);
+
+    // TODO: Backend endpoint not yet implemented
+    // When backend is ready, this will send POST request to /api/recommend
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -209,7 +219,7 @@ export default function HomeScreen() {
               }
               onPressOut={() => stopContinuousAction(minutesIncTimeoutRef, minutesIncIntervalRef)}
               onHoverIn={() => Platform.OS === 'web' && setMinutesIncHovered(true)}
-              onHoverOut={() => Platform.OS === 'web' && setMinutesIncHovered(false)}
+              onHoverOut={() => Platform.OS === 'web' && setMinutesDecHovered(false)}
               android_ripple={{ color: '#cccccc' }}
             >
               <Ionicons name="chevron-up" size={20} color="#333333" />
@@ -275,9 +285,14 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="play" size={20} color="#2196f3" style={styles.buttonIcon} />
-          <Text style={styles.actionButtonText}>{actions.recommendButton}</Text>
+          <Text style={styles.actionButtonText}>
+            {actions.recommendButton}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Tasks Bottom Sheet */}
+      <TasksBottomSheet />
     </SafeAreaView>
   );
 }

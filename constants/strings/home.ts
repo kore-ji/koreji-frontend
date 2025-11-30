@@ -13,6 +13,9 @@ const HOME_SCREEN_STRINGS = {
     recommendButton: 'Recommend task for me',
     recommendLog: 'Recommend task pressed',
   },
+  tasks: {
+    header: 'Tasks',
+  },
 };
 
 export type HomeScreenStrings = typeof HOME_SCREEN_STRINGS;
