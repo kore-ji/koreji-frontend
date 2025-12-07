@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     paddingBottom: Platform.OS === 'ios' ? 0 : 16,
   },
   buttonWrapper: {
