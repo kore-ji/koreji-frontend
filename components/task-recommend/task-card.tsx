@@ -84,8 +84,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   taskCardRecommended: {
-    borderWidth: 2,
-    borderColor: '#FF9000',
+    backgroundColor: '#FFF4E6',
   },
   taskCardSelected: {
     borderWidth: 2,
