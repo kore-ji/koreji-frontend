@@ -45,6 +45,7 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/react": "~19.1.0",
+    "@unrs/resolver-binding-darwin-arm64": "1.11.1",
     "dotenv": "^17.2.3",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
