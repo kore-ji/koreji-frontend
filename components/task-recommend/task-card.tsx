@@ -89,7 +89,6 @@ const styles = StyleSheet.create({
   taskCardSelected: {
     borderWidth: 2,
     borderColor: '#2196f3',
-    backgroundColor: '#F0F7FF',
   },
   taskCardMasonry: {
     marginBottom: 16,
