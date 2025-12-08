@@ -1,33 +1,30 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput, Keyboard
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-// --- 資料型別 (對應資料庫同一張表的結構) ---
+// --- 資料型別 ---
 interface TaskItem {
   id: string;
-  parentId: string | null; // 用來判斷是主還是子
+  parentId: string | null;
   title: string;
   description: string;
-  category?: string;       // 子任務此欄位為 null
+  category?: string;
   estimatedTime: number;
   isCompleted: boolean;
   tags: {
     priority?: string;
     attention?: string;
     tools: string[];
-    place?: string;        // 新增 Place
+    place?: string;
   };
 }
 
-// --- 扁平化的假資料 (模擬資料庫直接 Select All 的結果) ---
-const FLAT_TASKS_DB: TaskItem[] = [
-  // 任務 1: 主任務
-  {
-    id: '1', parentId: null, title: '完成期末報告', description: '包含文獻回顧', category: 'School', estimatedTime: 180, isCompleted: false,
-    tags: { tools: [] }
-  },
-  // 任務 1 的子任務
+// --- 初始假資料 ---
+const INITIAL_TASKS: TaskItem[] = [
+  
   {
     id: '101', parentId: '1', title: '找文獻', description: '至少五篇', estimatedTime: 60, isCompleted: true,
     tags: { priority: 'High', attention: 'Focus', tools: ['Computer'], place: 'Library' }
@@ -36,34 +33,129 @@ const FLAT_TASKS_DB: TaskItem[] = [
     id: '102', parentId: '1', title: '寫緒論', description: '', estimatedTime: 120, isCompleted: false,
     tags: { priority: 'Medium', attention: 'Focus', tools: ['Computer'], place: 'Dorm' }
   },
-
-  // 任務 2: 單獨任務 (無子任務)
   {
     id: '2', parentId: null, title: '整理房間', description: '週末大掃除', category: 'Home', estimatedTime: 45, isCompleted: false,
     tags: { priority: 'Low', attention: 'Relax', tools: [], place: 'Home' }
-  }
+  },
+  {
+    id: '1', parentId: null, title: '完成期末報告', description: '包含文獻回顧', category: 'School', estimatedTime: 0, isCompleted: false,
+    tags: { tools: ['Computer'] }
+  },
 ];
+
+// --- [新組件] 可編輯文字欄位 ---
+// 負責處理顯示文字 vs 輸入框的切換
+interface EditableFieldProps {
+  value: string;
+  isNumeric?: boolean;
+  textStyle?: any;
+  containerStyle?: any;
+  placeholder?: string;
+  isReadOnly?: boolean;
+  onSave: (newValue: string) => void;
+}
+
+const EditableField = ({
+  value,
+  isNumeric,
+  textStyle,
+  containerStyle,
+  placeholder,
+  isReadOnly = false,
+  onSave
+}: EditableFieldProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempValue, setTempValue] = useState(value);
+
+  // 當外部資料改變時，同步更新內部暫存值
+  React.useEffect(() => {
+    setTempValue(value);
+  }, [value]);
+
+  const handleStartEdit = () => {
+    if (isReadOnly) return;
+    setIsEditing(true);
+  };
+
+  const handleSubmit = () => {
+    setIsEditing(false);
+    // 如果值有變才更新
+    if (tempValue !== value) {
+      onSave(tempValue);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <View style={[containerStyle, styles.inputWrapper]}>
+        <TextInput
+          value={tempValue}
+          onChangeText={setTempValue}
+          onSubmitEditing={handleSubmit} // 按 Enter 觸發
+          onBlur={handleSubmit} // 失去焦點也觸發儲存
+          autoFocus
+          keyboardType={isNumeric ? 'numeric' : 'default'}
+          style={[textStyle, { padding: 0, minWidth: 40 }]} // 保持與原本文字樣式一致
+          returnKeyType="done"
+        />
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handleStartEdit}
+      style={containerStyle}
+      activeOpacity={isReadOnly ? 1 : 0.6}
+    >
+      <Text style={[
+        textStyle,
+        isReadOnly && { opacity: 0.6 } // 唯讀時稍微淡一點
+      ]}>
+        {value || placeholder}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 export default function TasksScreen() {
   const router = useRouter();
+
+  // 1. 將資料轉為 State，這樣才能修改
+  const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // --- 資料轉換邏輯 (Flat -> Tree) ---
-  // 這段通常在前端做，或是後端用 ORM 處理好再丟過來
-  // 這裡演示前端如何處理扁平資料
-  const structuredTasks = useMemo(() => {
-    // 1. 找出所有主任務
-    const mainTasks = FLAT_TASKS_DB.filter(t => t.parentId === null);
+  // 2. 更新任務資料的函式 (模擬 DB Update)
+  const updateTaskField = (id: string, field: keyof TaskItem, value: any) => {
+    setTasks(prevTasks => prevTasks.map(t => {
+      if (t.id === id) {
+        return { ...t, [field]: value };
+      }
+      return t;
+    }));
+    console.log(`[DB Update] Task ${id}: ${field} = ${value}`);
+  };
 
-    // 2. 將子任務掛載到對應的主任務下
+  // 3. 資料結構轉換 (Flat -> Tree) 並動態計算時間
+  const structuredTasks = useMemo(() => {
+    const mainTasks = tasks.filter(t => t.parentId === null);
+
     return mainTasks.map(main => {
-      const subtasks = FLAT_TASKS_DB.filter(t => t.parentId === main.id);
+      const subtasks = tasks.filter(t => t.parentId === main.id);
+
+      // 動態計算總時間 (如果子任務時間被修改，這裡會自動重算)
+      let displayTime = main.estimatedTime;
+      if (subtasks.length > 0) {
+        displayTime = subtasks.reduce((sum, sub) => sum + sub.estimatedTime, 0);
+      }
+
       return {
         ...main,
-        subtasks: subtasks // 這裡臨時加一個屬性給 UI 渲染用
+        displayTime, // 用於顯示的屬性
+        subtasks
       };
     });
-  }, []);
+  }, [tasks]);
 
   const toggleExpand = (id: string) => {
     const newSet = new Set(expandedIds);
@@ -72,57 +164,91 @@ export default function TasksScreen() {
     setExpandedIds(newSet);
   };
 
-  const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[] } }) => {
+  const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
     const isExpanded = expandedIds.has(item.id);
     const hasSubtasks = item.subtasks.length > 0;
 
     // 計算進度
     const totalSub = item.subtasks.length;
     const completedSub = item.subtasks.filter(s => s.isCompleted).length;
-    // 如果沒有子任務，進度條看自己是否完成 (或直接顯示 0%)
     const progressPercent = totalSub > 0 ? (completedSub / totalSub) * 100 : (item.isCompleted ? 100 : 0);
 
     return (
       <View style={styles.card}>
-        <TouchableOpacity
-          style={styles.taskHeader}
-          onPress={() => hasSubtasks && toggleExpand(item.id)}
-          activeOpacity={0.7}
-        >
-          {/* Header Top */}
+        <View style={styles.taskHeader}>
+
+          {/* 上半部：類別與標題 */}
           <View style={styles.headerTop}>
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{item.category || 'TASK'}</Text>
             </View>
+
+            {/* 標題 (可編輯) */}
             <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle}>{item.title}</Text>
+              <EditableField
+                value={item.title}
+                textStyle={styles.taskTitle}
+                onSave={(val) => updateTaskField(item.id, 'title', val)}
+              />
             </View>
-            {/* 只有有子任務時才顯示箭頭 */}
+
+            {/* 展開箭頭 */}
             {hasSubtasks && (
-              <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#999" />
+              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={{ padding: 4 }}>
+                <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#999" />
+              </TouchableOpacity>
             )}
           </View>
 
-          {item.description ? <Text style={styles.taskDesc}>{item.description}</Text> : null}
+          {/* 描述 (可編輯) */}
+          <EditableField
+            value={item.description}
+            placeholder="新增描述..."
+            textStyle={styles.taskDesc}
+            onSave={(val) => updateTaskField(item.id, 'description', val)}
+          />
 
-          {/* 如果是單獨任務，直接顯示它的 Tag 在這裡 */}
-          {!hasSubtasks && (
-            <View style={styles.tagsRow}>
-              <Text style={styles.tagTime}>⏱ {item.estimatedTime} min</Text>
-              <TagsDisplay tags={item.tags} />
-            </View>
-          )}
+          {/* === Meta 資訊 (Tag & Time) === */}
+          {/* 修改點：這裡不再把整個區塊隱藏，而是根據情況顯示內容 */}
+          <View style={styles.tagsRow}>
 
-          {/* 進度條 (有子任務才顯示，或統一顯示) */}
+            {/* 只有在「沒有子任務」時，才在這裡顯示可編輯的時間欄位 */}
+            {/* 有子任務時，時間會顯示在下方的 totalTimeBadge，避免重複 */}
+            {!hasSubtasks && (
+              <>
+                <Text style={styles.clockIcon}>⏱</Text>
+                <EditableField
+                  value={item.estimatedTime.toString()}
+                  isNumeric
+                  textStyle={styles.tagTime}
+                  containerStyle={styles.timeTagContainer}
+                  onSave={(val) => updateTaskField(item.id, 'estimatedTime', parseInt(val) || 0)}
+                />
+                <Text style={styles.tagUnit}>min</Text>
+              </>
+            )}
+
+            {/* Tags 現在永遠顯示，無論是不是主任務 */}
+            <TagsDisplay tags={item.tags} />
+          </View>
+
+          {/* 有子任務時顯示：進度條 + 總時間 (唯讀) */}
           {hasSubtasks && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+            <View style={styles.progressRow}>
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                </View>
+                <Text style={styles.progressText}>{Math.round(progressPercent)}%</Text>
               </View>
-              <Text style={styles.progressText}>{Math.round(progressPercent)}%</Text>
+
+              {/* 這裡顯示加總後的時間 (唯讀) */}
+              <View style={styles.totalTimeBadge}>
+                <Text style={styles.totalTimeText}>總計 {item.displayTime} min</Text>
+              </View>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
 
         {/* 展開子任務 */}
         {isExpanded && hasSubtasks && (
@@ -130,16 +256,44 @@ export default function TasksScreen() {
             {item.subtasks.map((sub) => (
               <View key={sub.id} style={styles.subtaskContainer}>
                 <View style={styles.subtaskRow}>
-                  <Ionicons name={sub.isCompleted ? "checkbox" : "square-outline"} size={20} color={sub.isCompleted ? "#4CAF50" : "#999"} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.subtaskText, sub.isCompleted && styles.completedText]}>{sub.title}</Text>
-                    {sub.description ? <Text style={styles.subtaskDesc}>{sub.description}</Text> : null}
+                  {/* 完成勾選 */}
+                  <TouchableOpacity onPress={() => updateTaskField(sub.id, 'isCompleted', !sub.isCompleted)}>
+                    <Ionicons
+                      name={sub.isCompleted ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={sub.isCompleted ? "#4CAF50" : "#999"}
+                    />
+                  </TouchableOpacity>
+
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    {/* 子任務標題 (可編輯) */}
+                    <EditableField
+                      value={sub.title}
+                      textStyle={[styles.subtaskText, sub.isCompleted && styles.completedText]}
+                      onSave={(val) => updateTaskField(sub.id, 'title', val)}
+                    />
+                    {/* 子任務描述 (可編輯) */}
+                    <EditableField
+                      value={sub.description}
+                      placeholder="無描述"
+                      textStyle={styles.subtaskDesc}
+                      onSave={(val) => updateTaskField(sub.id, 'description', val)}
+                    />
                   </View>
                 </View>
 
-                {/* 子任務 Meta 資料 */}
+                {/* 子任務 Meta */}
                 <View style={styles.tagsRow}>
-                  <Text style={styles.tagTime}>⏱ {sub.estimatedTime} min</Text>
+                  <Text style={styles.clockIcon}>⏱</Text>
+                  {/* 子任務時間 (可編輯) */}
+                  <EditableField
+                    value={sub.estimatedTime.toString()}
+                    isNumeric
+                    textStyle={styles.tagTime}
+                    containerStyle={styles.timeTagContainer}
+                    onSave={(val) => updateTaskField(sub.id, 'estimatedTime', parseInt(val) || 0)}
+                  />
+                  <Text style={styles.tagUnit}>min</Text>
                   <TagsDisplay tags={sub.tags} />
                 </View>
               </View>
@@ -160,6 +314,7 @@ export default function TasksScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled" // 讓點擊輸入框外的區域能關閉鍵盤
       />
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/add_task')}>
         <Ionicons name="add" size={32} color="white" />
@@ -168,7 +323,7 @@ export default function TasksScreen() {
   );
 }
 
-// 抽離出一個簡單的 Tag 顯示小組件，避免重複代碼
+// Tag 組件 (保持不變)
 const TagsDisplay = ({ tags }: { tags: TaskItem['tags'] }) => (
   <>
     {tags.place && <View style={[styles.miniTag, { backgroundColor: '#E0F2F1' }]}><Text style={[styles.miniTagText, { color: '#00695C' }]}>{tags.place}</Text></View>}
@@ -184,27 +339,41 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   listContent: { padding: 16, paddingBottom: 80 },
   card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, overflow: 'hidden', elevation: 2 },
+
   taskHeader: { padding: 16 },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
-  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
   categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
-  taskTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  taskDesc: { fontSize: 14, color: '#666', marginBottom: 10 },
 
-  progressContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  // Editable Styles
+  inputWrapper: { borderBottomWidth: 1, borderBottomColor: '#2196f3', paddingBottom: 2 },
+  taskTitle: { fontSize: 18, fontWeight: '600', color: '#333', paddingVertical: 2 },
+  taskDesc: { fontSize: 14, color: '#666', marginBottom: 10, minHeight: 20 },
+
+  // Progress & Time
+  progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  progressContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 12 },
   progressBarBg: { flex: 1, height: 6, backgroundColor: '#eee', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 3 },
-  progressText: { fontSize: 12, color: '#888', width: 40, textAlign: 'right' },
+  progressText: { fontSize: 12, color: '#888', width: 36, textAlign: 'right' },
 
+  totalTimeBadge: { backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  totalTimeText: { fontSize: 12, fontWeight: '600', color: '#555' },
+
+  // Subtasks
   subtaskList: { backgroundColor: '#FAFAFA', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingVertical: 4 },
   subtaskContainer: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
+  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
   subtaskText: { fontSize: 15, color: '#333', fontWeight: '500' },
-  subtaskDesc: { fontSize: 13, color: '#888', marginTop: 2 },
+  subtaskDesc: { fontSize: 13, color: '#999', marginTop: 2 },
   completedText: { textDecorationLine: 'line-through', color: '#aaa' },
 
-  tagsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginLeft: 0 },
-  tagTime: { fontSize: 12, color: '#888', marginRight: 4 },
+  // Tags & Time Editing
+  tagsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 },
+  timeTagContainer: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
+  tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
+  tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },
+  clockIcon: { fontSize: 12 },
   miniTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   miniTagText: { fontSize: 10, fontWeight: '600' },
 

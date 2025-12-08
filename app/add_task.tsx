@@ -58,7 +58,7 @@ const TAG_GROUP_COLORS = [
 interface LocalSubTask {
     id: string;
     title: string;
-    description: string; // 新增描述欄位
+    description: string;
     estimatedTime: string;
     tags: TaskTags;
 }
@@ -100,6 +100,15 @@ export default function AddTaskScreen() {
     }, [subtasks, mainTime]);
 
     const isTimeReadOnly = subtasks.length > 0;
+
+    // --- AI 生成邏輯 (Placeholder) ---
+    const handleAIGenerate = () => {
+        if (!mainTitle.trim()) {
+            Alert.alert('提示', '請先輸入任務標題，AI 才能幫您生成子任務喔！');
+            return;
+        }
+        Alert.alert('AI Generate', '這裡未來會呼叫後端 API，根據標題自動生成 Subtasks。');
+    };
 
     // --- Tag 邏輯 ---
     const openTagModal = (target: 'main' | string) => {
@@ -340,12 +349,21 @@ export default function AddTaskScreen() {
                     multiline
                 />
 
-                {/* === 子任務 === */}
+                {/* === 子任務 Header 區域 (包含新按鈕) === */}
                 <View style={styles.subtaskHeader}>
                     <Text style={styles.sectionTitle}>Subtasks</Text>
-                    <TouchableOpacity onPress={addSubtask}>
-                        <Text style={styles.addLink}>+ Add Subtask</Text>
-                    </TouchableOpacity>
+
+                    <View style={styles.headerActions}>
+                        {/* --- AI Generate 按鈕 --- */}
+                        <TouchableOpacity style={styles.aiButton} onPress={handleAIGenerate}>
+                            <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 4 }} />
+                            <Text style={styles.aiButtonText}>AI Generate</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={addSubtask}>
+                            <Text style={styles.addLink}>+ Add Subtask</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.subtaskList}>
@@ -409,132 +427,133 @@ export default function AddTaskScreen() {
                         </View>
 
                         <ScrollView style={{ maxHeight: 400 }}>
-                            {/* All Tag Groups */}
-                            {tagGroupOrder.map(groupName => {
-                                const tags = tagGroups[groupName];
-                                if (!tags) return null;
-                                const groupConfig = TAG_GROUPS[groupName] || { isSingleSelect: false, allowAddTags: true };
-                                const isSingleSelect = groupConfig.isSingleSelect;
-                                const allowAddTags = groupConfig.allowAddTags;
-                                const selectedTags = tempTags.tagGroups?.[groupName] || [];
-                                const isSelected = isSingleSelect 
-                                    ? selectedTags.length > 0 && selectedTags[0]
-                                    : null;
-                                
-                                return (
-                                    <View key={groupName}>
-                                        <Text style={styles.modalLabel}>{groupName}</Text>
-                                        <View style={styles.chipContainer}>
-                                            {tags.map(tag => {
-                                                const tagIsSelected = isSingleSelect
-                                                    ? isSelected === tag
-                                                    : selectedTags.includes(tag);
-                                                
-                                                // Get color for this tag group
-                                                const groupColor = tagGroupColors[groupName] || TAG_GROUP_COLORS[0];
-                                                const selectedStyle = {
-                                                    backgroundColor: groupColor.bg,
-                                                    borderColor: groupColor.text,
-                                                };
-                                                
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={tag}
-                                                        style={[
-                                                            styles.chip,
-                                                            styles.chipOutline,
-                                                            tagIsSelected && selectedStyle
-                                                        ]}
-                                                        onPress={() => toggleTagInGroup(groupName, tag)}
-                                                    >
-                                                        <Text style={[
-                                                            styles.chipText,
-                                                            tagIsSelected && styles.chipTextSelected
-                                                        ]}>
-                                                            {tag}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                            {allowAddTags && (
-                                                editingTagInGroup?.groupName === groupName ? (
-                                                    <View style={styles.newPlaceInputContainer}>
-                                                        <TextInput
-                                                            style={styles.newPlaceInput}
-                                                            placeholder="New tag..."
-                                                            value={newTagInGroupName}
-                                                            onChangeText={setNewTagInGroupName}
-                                                            autoFocus
-                                                            onSubmitEditing={handleSaveTagToGroup}
-                                                        />
-                                                        <TouchableOpacity
-                                                            style={styles.savePlaceBtn}
-                                                            onPress={handleSaveTagToGroup}
-                                                        >
-                                                            <Ionicons name="checkmark" size={16} color="#4CAF50" />
-                                                        </TouchableOpacity>
-                                                        <TouchableOpacity
-                                                            style={styles.cancelPlaceBtn}
-                                                            onPress={() => {
-                                                                setEditingTagInGroup(null);
-                                                                setNewTagInGroupName('');
-                                                            }}
-                                                        >
-                                                            <Ionicons name="close" size={16} color="#666" />
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                ) : (
-                                                    <TouchableOpacity
-                                                        style={styles.addButton}
-                                                        onPress={() => handleAddTagToGroup(groupName)}
-                                                    >
-                                                        <Ionicons name="add" size={18} color="#666" />
-                                                    </TouchableOpacity>
-                                                )
-                                            )}
-                                        </View>
-                                    </View>
-                                );
-                            })}
+    {/* All Tag Groups */}
+    {tagGroupOrder.map(groupName => {
+        const tags = tagGroups[groupName];
+        if (!tags) return null;
+        const groupConfig = TAG_GROUPS[groupName] || { isSingleSelect: false, allowAddTags: true };
+        const isSingleSelect = groupConfig.isSingleSelect;
+        const allowAddTags = groupConfig.allowAddTags;
+        const selectedTags = tempTags.tagGroups?.[groupName] || [];
+        const isSelected = isSingleSelect 
+            ? selectedTags.length > 0 && selectedTags[0]
+            : null;
+        
+        return (
+            <View key={groupName}>
+                <Text style={styles.modalLabel}>{groupName}</Text>
+                <View style={styles.chipContainer}>
+                    {tags.map(tag => {
+                        const tagIsSelected = isSingleSelect
+                            ? isSelected === tag
+                            : selectedTags.includes(tag);
+                        
+                        // Get color for this tag group
+                        const groupColor = tagGroupColors[groupName] || TAG_GROUP_COLORS[0];
+                        const selectedStyle = {
+                            backgroundColor: groupColor.bg,
+                            borderColor: groupColor.text,
+                        };
+                        
+                        return (
+                            <TouchableOpacity
+                                key={tag}
+                                style={[
+                                    styles.chip,
+                                    styles.chipOutline,
+                                    tagIsSelected && selectedStyle
+                                ]}
+                                onPress={() => toggleTagInGroup(groupName, tag)}
+                            >
+                                <Text style={[
+                                    styles.chipText,
+                                    tagIsSelected && styles.chipTextSelected
+                                ]}>
+                                    {tag}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                    {allowAddTags && (
+                        editingTagInGroup?.groupName === groupName ? (
+                            <View style={styles.newPlaceInputContainer}>
+                                <TextInput
+                                    style={styles.newPlaceInput}
+                                    placeholder="New tag..."
+                                    value={newTagInGroupName}
+                                    onChangeText={setNewTagInGroupName}
+                                    autoFocus
+                                    onSubmitEditing={handleSaveTagToGroup}
+                                />
+                                <TouchableOpacity
+                                    style={styles.savePlaceBtn}
+                                    onPress={handleSaveTagToGroup}
+                                >
+                                    <Ionicons name="checkmark" size={16} color="#4CAF50" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.cancelPlaceBtn}
+                                    onPress={() => {
+                                        setEditingTagInGroup(null);
+                                        setNewTagInGroupName('');
+                                    }}
+                                >
+                                    <Ionicons name="close" size={16} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={() => handleAddTagToGroup(groupName)}
+                            >
+                                <Ionicons name="add" size={18} color="#666" />
+                            </TouchableOpacity>
+                        )
+                    )}
+                </View>
+            </View>
+        );
+    })}
 
-                            {/* Add New Tag Group */}
-                            {showTagGroupInput ? (
-                                <View style={styles.newPlaceInputContainer}>
-                                    <TextInput
-                                        style={styles.newPlaceInput}
-                                        placeholder="New tag group name..."
-                                        value={newTagGroupName}
-                                        onChangeText={setNewTagGroupName}
-                                        autoFocus
-                                        onSubmitEditing={handleSaveNewTagGroup}
-                                    />
-                                    <TouchableOpacity
-                                        style={styles.savePlaceBtn}
-                                        onPress={handleSaveNewTagGroup}
-                                    >
-                                        <Ionicons name="checkmark" size={16} color="#4CAF50" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.cancelPlaceBtn}
-                                        onPress={() => {
-                                            setShowTagGroupInput(false);
-                                            setNewTagGroupName('');
-                                        }}
-                                    >
-                                        <Ionicons name="close" size={16} color="#666" />
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <View style={[styles.chipContainer, { marginTop: 16 }]}>
-                                    <TouchableOpacity
-                                        style={styles.addTagGroupButton}
-                                        onPress={handleAddNewTagGroup}
-                                    >
-                                        <Ionicons name="add" size={20} color="#4CAF50" />
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </ScrollView>
+    {/* Add New Tag Group */}
+    {showTagGroupInput ? (
+        <View style={styles.newPlaceInputContainer}>
+            <TextInput
+                style={styles.newPlaceInput}
+                placeholder="New tag group name..."
+                value={newTagGroupName}
+                onChangeText={setNewTagGroupName}
+                autoFocus
+                onSubmitEditing={handleSaveNewTagGroup}
+            />
+            <TouchableOpacity
+                style={styles.savePlaceBtn}
+                onPress={handleSaveNewTagGroup}
+            >
+                <Ionicons name="checkmark" size={16} color="#4CAF50" />
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.cancelPlaceBtn}
+                onPress={() => {
+                    setShowTagGroupInput(false);
+                    setNewTagGroupName('');
+                }}
+            >
+                <Ionicons name="close" size={16} color="#666" />
+            </TouchableOpacity>
+        </View>
+    ) : (
+        <View style={[styles.chipContainer, { marginTop: 16 }]}>
+            <TouchableOpacity
+                style={styles.addTagGroupButton}
+                onPress={handleAddNewTagGroup}
+            >
+                <Ionicons name="add" size={20} color="#4CAF50" />
+            </TouchableOpacity>
+        </View>
+    )}
+</ScrollView>
+
 
                         <TouchableOpacity style={styles.modalSaveBtn} onPress={saveTags}>
                             <Text style={styles.submitBtnText}>Confirm</Text>
@@ -552,7 +571,7 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 16 },
 
     // Category Optimizations
-    catScrollContent: { paddingBottom: 8, gap: 12 }, // 增加 gap
+    catScrollContent: { paddingBottom: 8, gap: 12 },
     chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, backgroundColor: '#f0f0f0' },
     chipSelected: { backgroundColor: '#333' },
     chipText: { fontSize: 14, fontWeight: '500', color: '#333' },
@@ -569,31 +588,51 @@ const styles = StyleSheet.create({
     input: { backgroundColor: '#f9f9f9', padding: 12, borderRadius: 8, fontSize: 16, borderWidth: 1, borderColor: '#eee' },
     textArea: { height: 80, textAlignVertical: 'top' },
 
-    // Subtask Card Style (大幅優化)
+    // Subtask Header & AI Button
     subtaskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     addLink: { color: '#2196f3', fontWeight: '600' },
+
+    aiButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#9C27B0', // 紫色系代表 AI
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        elevation: 2,
+        shadowColor: '#9C27B0',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+    },
+    aiButtonText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+
+    // Subtask List & Card
     subtaskList: { gap: 16 },
     subtaskCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eee', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
 
-    // Row 1
     stRowTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     stTitleInput: { flex: 1, fontSize: 16, fontWeight: '500', color: '#333', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingVertical: 4 },
-    stTimeContainer: { width: 60, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fafafa', paddingVertical: 2 }, // 顯眼的框框
+    stTimeContainer: { width: 60, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fafafa', paddingVertical: 2 },
     stTimeInput: { textAlign: 'center', fontSize: 14, color: '#333' },
     deleteBtn: { padding: 4, backgroundColor: '#f0f0f0', borderRadius: 12 },
 
-    // Row 2
     stDescInput: { fontSize: 14, color: '#666', marginBottom: 12, paddingVertical: 4 },
-
-    // Row 3
     stTagContainer: { paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f9f9f9' },
 
+    // Tag & Modal
+    tagDisplayContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+    tagRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+    addTagBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
+    miniTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 },
+    miniTagText: { fontSize: 11, fontWeight: '600' },
 
     footer: { padding: 20, borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff' },
     submitBtn: { backgroundColor: '#2196f3', padding: 16, borderRadius: 12, alignItems: 'center' },
     submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 
-    // Modal Styles (簡略)
+    // Modal Styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
