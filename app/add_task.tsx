@@ -18,7 +18,7 @@ const TAG_OPTIONS = {
 interface LocalSubTask {
     id: string;
     title: string;
-    description: string; // 新增描述欄位
+    description: string;
     estimatedTime: string;
     tags: {
         priority?: string;
@@ -55,7 +55,16 @@ export default function AddTaskScreen() {
 
     const isTimeReadOnly = subtasks.length > 0;
 
-    // --- Tag 邏輯 (同前次) ---
+    // --- AI 生成邏輯 (Placeholder) ---
+    const handleAIGenerate = () => {
+        if (!mainTitle.trim()) {
+            Alert.alert('提示', '請先輸入任務標題，AI 才能幫您生成子任務喔！');
+            return;
+        }
+        Alert.alert('AI Generate', '這裡未來會呼叫後端 API，根據標題自動生成 Subtasks。');
+    };
+
+    // --- Tag 邏輯 ---
     const openTagModal = (target: 'main' | string) => {
         setEditingTarget(target);
         if (target === 'main') {
@@ -220,12 +229,21 @@ export default function AddTaskScreen() {
                     multiline
                 />
 
-                {/* === 子任務 === */}
+                {/* === 子任務 Header 區域 (包含新按鈕) === */}
                 <View style={styles.subtaskHeader}>
                     <Text style={styles.sectionTitle}>Subtasks</Text>
-                    <TouchableOpacity onPress={addSubtask}>
-                        <Text style={styles.addLink}>+ Add Subtask</Text>
-                    </TouchableOpacity>
+
+                    <View style={styles.headerActions}>
+                        {/* --- AI Generate 按鈕 --- */}
+                        <TouchableOpacity style={styles.aiButton} onPress={handleAIGenerate}>
+                            <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 4 }} />
+                            <Text style={styles.aiButtonText}>AI Generate</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={addSubtask}>
+                            <Text style={styles.addLink}>+ Add Subtask</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.subtaskList}>
@@ -278,7 +296,7 @@ export default function AddTaskScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Modal (保持原本邏輯，僅省略重複樣式以節省篇幅，內容與上一版相同，但已連接) */}
+            {/* Modal (保持不變) */}
             <Modal visible={!!editingTarget} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
@@ -287,8 +305,6 @@ export default function AddTaskScreen() {
                             <TouchableOpacity onPress={() => setEditingTarget(null)}><Ionicons name="close" size={24} color="#333" /></TouchableOpacity>
                         </View>
                         <ScrollView style={{ maxHeight: 400 }}>
-                            {/* ... 這裡放入上一版的 Tag 選擇邏輯 (Priority, Attention, Tools, Place) ... */}
-                            {/* 為了完整性，這裡簡略示意，請將上一版的 Modal 內容貼過來，或直接使用上一版的 Modal 程式碼 */}
                             <Text style={styles.modalLabel}>Priority</Text>
                             <View style={styles.chipContainer}>
                                 {TAG_OPTIONS.priority.map(p => (
@@ -317,7 +333,7 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 16 },
 
     // Category Optimizations
-    catScrollContent: { paddingBottom: 8, gap: 12 }, // 增加 gap
+    catScrollContent: { paddingBottom: 8, gap: 12 },
     chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, backgroundColor: '#f0f0f0' },
     chipSelected: { backgroundColor: '#333' },
     chipText: { fontSize: 14, fontWeight: '500', color: '#333' },
@@ -334,26 +350,40 @@ const styles = StyleSheet.create({
     input: { backgroundColor: '#f9f9f9', padding: 12, borderRadius: 8, fontSize: 16, borderWidth: 1, borderColor: '#eee' },
     textArea: { height: 80, textAlignVertical: 'top' },
 
-    // Subtask Card Style (大幅優化)
+    // Subtask Header & AI Button
     subtaskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     addLink: { color: '#2196f3', fontWeight: '600' },
+
+    aiButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#9C27B0', // 紫色系代表 AI
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        elevation: 2,
+        shadowColor: '#9C27B0',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+    },
+    aiButtonText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+
+    // Subtask List & Card
     subtaskList: { gap: 16 },
     subtaskCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eee', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
 
-    // Row 1
     stRowTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     stTitleInput: { flex: 1, fontSize: 16, fontWeight: '500', color: '#333', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingVertical: 4 },
-    stTimeContainer: { width: 60, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fafafa', paddingVertical: 2 }, // 顯眼的框框
+    stTimeContainer: { width: 60, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fafafa', paddingVertical: 2 },
     stTimeInput: { textAlign: 'center', fontSize: 14, color: '#333' },
     deleteBtn: { padding: 4, backgroundColor: '#f0f0f0', borderRadius: 12 },
 
-    // Row 2
     stDescInput: { fontSize: 14, color: '#666', marginBottom: 12, paddingVertical: 4 },
-
-    // Row 3
     stTagContainer: { paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f9f9f9' },
 
-    // Tag & Modal (保持一致)
+    // Tag & Modal
     tagDisplayContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
     tagRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
     addTagBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
@@ -364,7 +394,7 @@ const styles = StyleSheet.create({
     submitBtn: { backgroundColor: '#2196f3', padding: 16, borderRadius: 12, alignItems: 'center' },
     submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 
-    // Modal Styles (簡略)
+    // Modal Styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
