@@ -9,7 +9,7 @@ import { TagSection } from '@/components/ui/tag-section';
 
 // --- 常數定義 ---
 const CATEGORIES = ['School', 'Home', 'Work', 'Personal'];
-const PRESET_PLACES = ['Classroom', 'Library', 'Home', 'Office', 'Coffee Shop'];
+const INITIAL_PLACES = ['Classroom', 'Library', 'Home', 'Office', 'Coffee Shop'];
 const TAG_OPTIONS = {
     priority: ['High', 'Medium', 'Low'],
     attention: ['Focus', 'Relax'],
@@ -41,7 +41,9 @@ export default function AddTaskScreen() {
     // --- Tag Modal 狀態 ---
     const [editingTarget, setEditingTarget] = useState<'main' | string | null>(null);
     const [tempTags, setTempTags] = useState<TaskTags>({ tools: [] });
-    const [customPlace, setCustomPlace] = useState('');
+    const [showPlaceInput, setShowPlaceInput] = useState(false);
+    const [newPlaceName, setNewPlaceName] = useState('');
+    const [places, setPlaces] = useState<string[]>(INITIAL_PLACES);
 
     // --- 時間計算邏輯 ---
     const calculatedTotalTime = useMemo(() => {
@@ -52,7 +54,7 @@ export default function AddTaskScreen() {
 
     const isTimeReadOnly = subtasks.length > 0;
 
-    // --- Tag 邏輯 (同前次) ---
+    // --- Tag 邏輯 ---
     const openTagModal = (target: 'main' | string) => {
         setEditingTarget(target);
         if (target === 'main') {
@@ -61,19 +63,44 @@ export default function AddTaskScreen() {
             const sub = subtasks.find(s => s.id === target);
             if (sub) setTempTags({ ...sub.tags });
         }
-        setCustomPlace('');
+        setShowPlaceInput(false);
+        setNewPlaceName('');
     };
 
     const saveTags = () => {
-        const finalTags = { ...tempTags };
-        if (customPlace.trim()) finalTags.place = customPlace.trim();
-
         if (editingTarget === 'main') {
-            setMainTags(finalTags);
+            setMainTags(tempTags);
         } else if (typeof editingTarget === 'string') {
-            setSubtasks(prev => prev.map(s => s.id === editingTarget ? { ...s, tags: finalTags } : s));
+            setSubtasks(prev => prev.map(s => s.id === editingTarget ? { ...s, tags: tempTags } : s));
         }
         setEditingTarget(null);
+        setShowPlaceInput(false);
+        setNewPlaceName('');
+    };
+
+    const handleAddNewPlace = () => {
+        setShowPlaceInput(true);
+    };
+
+    const handleSaveNewPlace = () => {
+        const trimmedPlace = newPlaceName.trim();
+        if (trimmedPlace && !places.includes(trimmedPlace)) {
+            // Add the new place to the list
+            setPlaces(prev => [...prev, trimmedPlace]);
+            // Set it as selected
+            setTempTags({
+                ...tempTags,
+                place: trimmedPlace
+            });
+        } else if (trimmedPlace && places.includes(trimmedPlace)) {
+            // If it already exists, just select it
+            setTempTags({
+                ...tempTags,
+                place: trimmedPlace
+            });
+        }
+        setShowPlaceInput(false);
+        setNewPlaceName('');
     };
 
     const toggleTool = (tool: string) => {
@@ -309,34 +336,67 @@ export default function AddTaskScreen() {
                             />
 
                             {/* Place Section */}
-                            <TagSection
-                                title="Place"
-                                options={PRESET_PLACES}
-                                selectedValue={tempTags.place}
-                                onSelect={(value) => {
-                                    setTempTags({
-                                        ...tempTags,
-                                        place: tempTags.place === value ? undefined : value
-                                    });
-                                    setCustomPlace('');
-                                }}
-                                selectedStyle={styles.chipPlaceSelected}
-                            />
-
-                            {/* Custom Place Input */}
-                            <View style={styles.customPlaceRow}>
-                                <Ionicons name="pencil" size={16} color="#666" />
-                                <TextInput
-                                    style={styles.customPlaceInput}
-                                    placeholder="Custom place..."
-                                    value={customPlace}
-                                    onChangeText={(text) => {
-                                        setCustomPlace(text);
-                                        if (text) {
-                                            setTempTags({ ...tempTags, place: undefined });
-                                        }
-                                    }}
-                                />
+                            <Text style={styles.modalLabel}>Place</Text>
+                            <View style={styles.chipContainer}>
+                                {places.map(p => (
+                                    <TouchableOpacity
+                                        key={p}
+                                        style={[
+                                            styles.chip,
+                                            styles.chipOutline,
+                                            tempTags.place === p && styles.chipPlaceSelected
+                                        ]}
+                                        onPress={() => {
+                                            setTempTags({
+                                                ...tempTags,
+                                                place: tempTags.place === p ? undefined : p
+                                            });
+                                            setShowPlaceInput(false);
+                                            setNewPlaceName('');
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.chipText,
+                                            tempTags.place === p && styles.chipTextSelected
+                                        ]}>
+                                            {p}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                                {showPlaceInput ? (
+                                    <View style={styles.newPlaceInputContainer}>
+                                        <TextInput
+                                            style={styles.newPlaceInput}
+                                            placeholder="New place..."
+                                            value={newPlaceName}
+                                            onChangeText={setNewPlaceName}
+                                            autoFocus
+                                            onSubmitEditing={handleSaveNewPlace}
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.savePlaceBtn}
+                                            onPress={handleSaveNewPlace}
+                                        >
+                                            <Ionicons name="checkmark" size={16} color="#009688" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.cancelPlaceBtn}
+                                            onPress={() => {
+                                                setShowPlaceInput(false);
+                                                setNewPlaceName('');
+                                            }}
+                                        >
+                                            <Ionicons name="close" size={16} color="#666" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.addButton}
+                                        onPress={handleAddNewPlace}
+                                    >
+                                        <Ionicons name="add" size={18} color="#666" />
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </ScrollView>
 
@@ -406,7 +466,13 @@ const styles = StyleSheet.create({
     chipAttentionSelected: { backgroundColor: '#9C27B0', borderColor: '#9C27B0' },
     chipToolSelected: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
     chipPlaceSelected: { backgroundColor: '#009688', borderColor: '#009688' },
-    customPlaceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, padding: 10, backgroundColor: '#f5f5f5', borderRadius: 8 },
-    customPlaceInput: { flex: 1 },
+    modalLabel: { marginTop: 16, marginBottom: 8, fontWeight: '600', color: '#666' },
+    chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chipOutline: { borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff' },
+    addButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd' },
+    newPlaceInputContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#009688', borderRadius: 20, backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 8 },
+    newPlaceInput: { minWidth: 100, fontSize: 14, color: '#333' },
+    savePlaceBtn: { padding: 4 },
+    cancelPlaceBtn: { padding: 4 },
     modalSaveBtn: { marginTop: 24, backgroundColor: '#333', padding: 14, borderRadius: 12, alignItems: 'center' },
 });

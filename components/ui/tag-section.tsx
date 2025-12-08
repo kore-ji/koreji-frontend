@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { TagChip } from './tag-chip';
 
 interface TagSectionProps {
@@ -10,6 +11,7 @@ interface TagSectionProps {
     selectedStyle?: ViewStyle;
     isMultiSelect?: boolean;
     selectedValues?: string[];
+    onAddNew?: () => void;
 }
 
 export function TagSection({ 
@@ -19,7 +21,8 @@ export function TagSection({
     onSelect, 
     selectedStyle,
     isMultiSelect = false,
-    selectedValues = []
+    selectedValues = [],
+    onAddNew
 }: TagSectionProps) {
     return (
         <>
@@ -40,6 +43,14 @@ export function TagSection({
                         />
                     );
                 })}
+                {onAddNew && (
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={onAddNew}
+                    >
+                        <Ionicons name="add" size={18} color="#666" />
+                    </TouchableOpacity>
+                )}
             </View>
         </>
     );
@@ -56,5 +67,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
+    },
+    addButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
 });
