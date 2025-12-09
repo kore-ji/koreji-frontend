@@ -1,11 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-    StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Alert
+    StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Alert, Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TagDisplayRow, type TaskTags } from '@/components/ui/tag-display-row';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
+
+// Import DateTimePicker
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // --- 常數定義 ---
 const DEFAULT_CATEGORIES = ['School', 'Home', 'Work', 'Personal'];
@@ -77,6 +80,8 @@ export default function AddTaskScreen() {
     const [mainTitle, setMainTitle] = useState('');
     const [mainDesc, setMainDesc] = useState('');
     const [mainTime, setMainTime] = useState('');
+    const [mainDeadline, setMainDeadline] = useState<Date | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [mainTags, setMainTags] = useState<TaskTags>({ 
         tagGroups: { 
             Category: [DEFAULT_CATEGORIES[0]] 
@@ -110,6 +115,69 @@ export default function AddTaskScreen() {
     }, [subtasks, mainTime]);
 
     const isTimeReadOnly = subtasks.length > 0;
+
+    // --- Date formatting ---
+    const formatDate = (date: Date | null): string => {
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const handleDateChange = (event: any, selectedDate?: Date) => {
+        console.log('[DEBUG] handleDateChange called:', {
+            platform: Platform.OS,
+            eventType: event?.type,
+            selectedDate: selectedDate?.toISOString(),
+            currentDeadline: mainDeadline?.toISOString(),
+            event: JSON.stringify(event, null, 2),
+        });
+
+        if (Platform.OS === 'android') {
+            // On Android, the picker closes automatically
+            // event.type can be 'set', 'dismissed', or 'neutralButtonPressed'
+            console.log('[DEBUG] Android - event.type:', event.type);
+            if (event.type === 'set' && selectedDate) {
+                console.log('[DEBUG] Android - Setting deadline to:', selectedDate.toISOString());
+                setMainDeadline(selectedDate);
+            } else {
+                console.log('[DEBUG] Android - Not setting deadline. event.type:', event.type, 'selectedDate:', selectedDate?.toISOString());
+            }
+            setShowDatePicker(false);
+        } else {
+            // iOS: update date as user scrolls, but don't close until Done is pressed
+            if (selectedDate) {
+                console.log('[DEBUG] iOS - Updating deadline to:', selectedDate.toISOString());
+                setMainDeadline(selectedDate);
+            } else {
+                console.log('[DEBUG] iOS - No selectedDate provided');
+            }
+        }
+    };
+
+    const handleDatePickerDone = () => {
+        console.log('[DEBUG] handleDatePickerDone called. Current deadline:', mainDeadline?.toISOString());
+        setShowDatePicker(false);
+    };
+
+    const handleDatePickerCancel = () => {
+        console.log('[DEBUG] handleDatePickerCancel called. Deadline will remain:', mainDeadline?.toISOString());
+        setShowDatePicker(false);
+    };
+
+    // Debug log when deadline state changes
+    useEffect(() => {
+        console.log('[DEBUG] mainDeadline state changed:', {
+            deadline: mainDeadline?.toISOString(),
+            formatted: mainDeadline ? formatDate(mainDeadline) : 'null',
+        });
+    }, [mainDeadline]);
+
+    // Debug log when showDatePicker state changes
+    useEffect(() => {
+        console.log('[DEBUG] showDatePicker state changed:', showDatePicker);
+    }, [showDatePicker]);
 
     // --- AI 生成邏輯 (Placeholder) ---
     const handleAIGenerate = () => {
@@ -314,6 +382,7 @@ export default function AddTaskScreen() {
             description: mainDesc,
             category: categoryFromTags,
             estimatedTime: parseInt(calculatedTotalTime) || 0,
+            deadline: mainDeadline ? formatDate(mainDeadline) : null,
             tags: mainTags,
             isCompleted: false,
             createdAt,
@@ -343,7 +412,7 @@ export default function AddTaskScreen() {
 
                 {/* Main Task Card - matching subtask structure */}
                 <View style={[styles.subtaskCard, { marginBottom: 24 }]}>
-                    {/* Row 1: Title, Time */}
+                    {/* Row 1: Title */}
                     <View style={styles.stRowTop}>
                         <TextInput
                             style={styles.mainTaskTitleInput}
@@ -351,6 +420,10 @@ export default function AddTaskScreen() {
                             value={mainTitle}
                             onChangeText={setMainTitle}
                         />
+                    </View>
+
+                    {/* Row 2: Time and Deadline */}
+                    <View style={styles.timeDeadlineRow}>
                         <View style={[styles.stTimeContainer, isTimeReadOnly && styles.timeBoxDisabled]}>
                             <TextInput
                                 style={[styles.stTimeInput, isTimeReadOnly && { color: '#888' }]}
@@ -361,6 +434,18 @@ export default function AddTaskScreen() {
                                 placeholder={TASK_SCREEN_STRINGS.addTask.minPlaceholder}
                             />
                         </View>
+                        <TouchableOpacity 
+                            style={styles.deadlineContainer}
+                            onPress={() => {
+                                console.log('[DEBUG] Deadline button pressed. Current deadline:', mainDeadline?.toISOString());
+                                setShowDatePicker(true);
+                            }}
+                        >
+                            <Text style={[styles.deadlineInput, !mainDeadline && styles.deadlinePlaceholder]}>
+                                {mainDeadline ? formatDate(mainDeadline) : TASK_SCREEN_STRINGS.addTask.deadlinePlaceholder}
+                            </Text>
+                            <Ionicons name="calendar-outline" size={16} color="#666" style={{ marginLeft: 4 }} />
+                        </TouchableOpacity>
                     </View>
 
                     {/* Row 2: Description */}
@@ -450,6 +535,113 @@ export default function AddTaskScreen() {
                     <Text style={styles.submitBtnText}>{TASK_SCREEN_STRINGS.addTask.createTaskButton}</Text>
                 </TouchableOpacity>
             </View>
+            
+            {/* Date Picker */}
+            {showDatePicker && (
+                <>
+                    {Platform.OS === 'web' ? (
+                        <Modal visible={showDatePicker} transparent animationType="fade">
+                            <TouchableOpacity 
+                                style={styles.modalOverlayCentered}
+                                activeOpacity={1}
+                                onPress={handleDatePickerCancel}
+                            >
+                                <TouchableOpacity 
+                                    activeOpacity={1} 
+                                    onPress={(e) => e.stopPropagation()}
+                                >
+                                    <View style={styles.datePickerContainerCentered}>
+                                        <View style={styles.datePickerActions}>
+                                            <TouchableOpacity onPress={handleDatePickerCancel}>
+                                                <Text style={styles.datePickerCancel}>Cancel</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={handleDatePickerDone}>
+                                                <Text style={styles.datePickerDone}>Done</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <View style={styles.webDateInputContainer}>
+                                            <Text style={styles.webDateLabel}>Select Deadline:</Text>
+                                            {Platform.OS === 'web' ? (
+                                                // @ts-ignore - web only
+                                                <input
+                                                    type="date"
+                                                    style={styles.webDateInputNative}
+                                                    value={mainDeadline ? formatDate(mainDeadline) : ''}
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    onChange={(e) => {
+                                                        console.log('[DEBUG] Web date input changed:', e.target.value);
+                                                        if (e.target.value) {
+                                                            const date = new Date(e.target.value + 'T00:00:00');
+                                                            if (!isNaN(date.getTime())) {
+                                                                setMainDeadline(date);
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <TextInput
+                                                    style={styles.webDateInput}
+                                                    value={mainDeadline ? formatDate(mainDeadline) : ''}
+                                                    placeholder="YYYY-MM-DD"
+                                                    onChangeText={(text) => {
+                                                        console.log('[DEBUG] Date input changed:', text);
+                                                        if (text) {
+                                                            const date = new Date(text + 'T00:00:00');
+                                                            if (!isNaN(date.getTime())) {
+                                                                setMainDeadline(date);
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </TouchableOpacity>
+                        </Modal>
+                    ) : Platform.OS === 'ios' ? (
+                        <Modal visible={showDatePicker} transparent animationType="fade">
+                            <TouchableOpacity 
+                                style={styles.modalOverlayCentered}
+                                activeOpacity={1}
+                                onPress={handleDatePickerCancel}
+                            >
+                                <TouchableOpacity 
+                                    activeOpacity={1} 
+                                    onPress={(e) => e.stopPropagation()}
+                                >
+                                    <View style={styles.datePickerContainerCentered}>
+                                        <View style={styles.datePickerActions}>
+                                            <TouchableOpacity onPress={handleDatePickerCancel}>
+                                                <Text style={styles.datePickerCancel}>Cancel</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={handleDatePickerDone}>
+                                                <Text style={styles.datePickerDone}>Done</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <DateTimePicker
+                                            value={mainDeadline || new Date()}
+                                            mode="date"
+                                            display="spinner"
+                                            onChange={handleDateChange}
+                                            minimumDate={new Date()}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </TouchableOpacity>
+                        </Modal>
+                    ) : (
+                        <DateTimePicker
+                            value={mainDeadline || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={handleDateChange}
+                            minimumDate={new Date()}
+                        />
+                    )}
+                </>
+            )}
+            
             {/* Tag Selection Modal */}
             <Modal visible={!!editingTarget} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
@@ -688,8 +880,101 @@ const styles = StyleSheet.create({
     stRowTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     stTitleInput: { flex: 1, fontSize: 16, fontWeight: '500', color: '#333', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingVertical: 4 },
     mainTaskTitleInput: { flex: 1, fontSize: 20, fontWeight: '600', color: '#333', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', paddingVertical: 4 },
+    timeDeadlineRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
     stTimeContainer: { width: 60, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, backgroundColor: '#fafafa', paddingVertical: 2 },
     stTimeInput: { textAlign: 'center', fontSize: 14, color: '#333' },
+    deadlineContainer: { 
+        flex: 1, 
+        borderWidth: 1, 
+        borderColor: '#ddd', 
+        borderRadius: 6, 
+        backgroundColor: '#fafafa', 
+        paddingVertical: 2, 
+        paddingHorizontal: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    deadlineInput: { fontSize: 14, color: '#333' },
+    deadlinePlaceholder: { color: '#999' },
+    datePickerContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalOverlayCentered: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    datePickerContainerCentered: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 20,
+        width: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    datePickerActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        alignItems: 'center',
+    },
+    datePickerCancel: {
+        color: '#666',
+        fontSize: 16,
+    },
+    datePickerDone: {
+        color: '#2196f3',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    webDateInputContainer: {
+        paddingVertical: 8,
+        gap: 8,
+    },
+    webDateLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    webDateInput: {
+        fontSize: 16,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        color: '#333',
+    },
+    webDateInputNative: {
+        fontSize: 12,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        color: '#333',
+        width: '80%',
+        fontFamily: 'inherit',
+    },
     deleteBtn: { padding: 4, backgroundColor: '#f0f0f0', borderRadius: 12 },
 
     stDescInput: { fontSize: 14, color: '#666', marginBottom: 12, paddingVertical: 4 },

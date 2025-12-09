@@ -10,6 +10,7 @@ const TASK_SCREEN_STRINGS = {
     // Labels
     categoryLabel: 'Category',
     timeLabel: 'Time (min)',
+    deadlineLabel: 'Deadline',
     tagsLabel: 'Tags',
     subtaskTagsLabel: 'Tags',
     
@@ -23,6 +24,7 @@ const TASK_SCREEN_STRINGS = {
     newTagGroupPlaceholder: 'New tag group name...',
     timePlaceholder: '0',
     minPlaceholder: 'Min',
+    deadlinePlaceholder: 'YYYY-MM-DD',
     
     // Buttons
     createTaskButton: 'Create Task',
