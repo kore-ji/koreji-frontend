@@ -20,6 +20,14 @@ type FilterDropdownProps<T extends string> = {
   otherOptionValue?: string;
   onOtherValueChange?: (value: string) => void;
   maxInputLength?: number;
+  onAddNew?: {
+    showInput: boolean;
+    inputValue: string;
+    onInputChange: (value: string) => void;
+    onSave: () => void;
+    onCancel: () => void;
+    placeholder?: string;
+  };
 };
 
 const DEFAULT_MAX_INPUT_LENGTH = 30;
@@ -33,6 +41,7 @@ export function FilterDropdown<T extends string>({
   otherOptionValue = '',
   onOtherValueChange,
   maxInputLength = DEFAULT_MAX_INPUT_LENGTH,
+  onAddNew,
 }: FilterDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedValues = multiple
@@ -113,7 +122,7 @@ export function FilterDropdown<T extends string>({
             {getDisplayText()}
           </Text>
         </View>
-        <Ionicons name="chevron-down" size={16} color="#4CAF50" style={styles.chevron} />
+        <Ionicons name="chevron-down" size={16} color="#666666" style={styles.chevron} />
       </Pressable>
 
       <Modal
@@ -195,6 +204,48 @@ export function FilterDropdown<T extends string>({
                   </View>
                 );
               }}
+              ListFooterComponent={
+                onAddNew ? (
+                  <View>
+                    {onAddNew.showInput ? (
+                      <View style={styles.newPlaceInputContainer}>
+                        <TextInput
+                          style={styles.newPlaceInput}
+                          placeholder={onAddNew.placeholder || "New item..."}
+                          value={onAddNew.inputValue}
+                          onChangeText={onAddNew.onInputChange}
+                          autoFocus
+                          onSubmitEditing={onAddNew.onSave}
+                        />
+                        <TouchableOpacity 
+                          style={styles.savePlaceBtn}
+                          onPress={onAddNew.onSave}
+                          disabled={!onAddNew.inputValue.trim()}
+                        >
+                          <Ionicons name="checkmark" size={16} color={onAddNew.inputValue.trim() ? "#4CAF50" : "#ccc"} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.cancelPlaceBtn}
+                          onPress={onAddNew.onCancel}
+                        >
+                          <Ionicons name="close" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.addNewItemButton}
+                        onPress={() => {
+                          // Trigger parent to show input by setting a trigger value
+                          onAddNew.onInputChange('__SHOW_INPUT__');
+                        }}
+                      >
+                        <Ionicons name="add" size={20} color="#666" style={{ marginRight: 8 }} />
+                        <Text style={styles.addNewItemText}>Add New</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : null
+              }
             />
             {(multiple || isOtherSelected) && (
               <View style={styles.modalFooter}>
@@ -234,14 +285,14 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: '#666666',
   },
   filterValueBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: '#CCCCCC',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -251,7 +302,7 @@ const styles = StyleSheet.create({
   },
   filterValue: {
     fontSize: 13,
-    color: '#4CAF50',
+    color: '#333333',
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 18,
@@ -363,6 +414,44 @@ const styles = StyleSheet.create({
   inputWarningText: {
     fontSize: 12,
     color: '#F44336',
+    fontWeight: '500',
+  },
+  newPlaceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#009688',
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    marginVertical: 12,
+  },
+  newPlaceInput: {
+    minWidth: 100,
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  savePlaceBtn: {
+    padding: 4,
+  },
+  cancelPlaceBtn: {
+    padding: 4,
+  },
+  addNewItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  addNewItemText: {
+    fontSize: 16,
+    color: '#666666',
     fontWeight: '500',
   },
 });
