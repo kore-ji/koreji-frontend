@@ -17,7 +17,7 @@ const TASK_SCREEN_STRINGS = {
     // Placeholders
     taskTitlePlaceholder: 'Task title',
     descriptionPlaceholder: 'Description (optional)...',
-    getSubtaskTitlePlaceholder: (index: number) => `Subtask ${index + 1}`,
+    getSubtaskTitlePlaceholder: (index: number) => 'Subtask title',
     subtaskDescriptionPlaceholder: 'Add subtask description...',
     newCategoryPlaceholder: 'New category...',
     newTagPlaceholder: 'New tag...',
