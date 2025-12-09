@@ -5,6 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TagDisplayRow, type TaskTags } from '@/components/ui/tag-display-row';
+import { FilterDropdown } from '@/components/ui/filter-dropdown';
 
 // --- 常數定義 ---
 const CATEGORIES = ['School', 'Home', 'Work', 'Personal'];
@@ -65,6 +66,7 @@ interface LocalSubTask {
 
 export default function AddTaskScreen() {
     const router = useRouter();
+    const [useCategoryDropdown, setUseCategoryDropdown] = useState(false);
 
     // --- 主任務狀態 ---
     const [mainTitle, setMainTitle] = useState('');
@@ -252,6 +254,27 @@ export default function AddTaskScreen() {
         setSubtasks(prev => prev.filter(s => s.id !== id));
     };
 
+    // Check if category chips would overflow based on container width
+    const handleCategoryContainerLayout = (event: any) => {
+        const { width } = event.nativeEvent.layout;
+        if (width > 0) {
+            // Estimate total width needed for all chips
+            // Each chip: horizontal padding (16*2 = 32px) + text width (varies by category name)
+            // Gap between chips: 12px
+            const chipPadding = 32; // 16px * 2
+            const gap = 12;
+            // Calculate estimated width for each category based on text length
+            // Rough estimation: ~9px per character for font size 14, font weight 500
+            const estimatedWidths = CATEGORIES.map(cat => {
+                const estimatedTextWidth = cat.length * 9;
+                return chipPadding + estimatedTextWidth;
+            });
+            const totalWidthNeeded = estimatedWidths.reduce((sum, w) => sum + w, 0) + (CATEGORIES.length - 1) * gap;
+            // Add buffer (20px) to account for measurement variations and rounding
+            setUseCategoryDropdown(totalWidthNeeded + 20 > width);
+        }
+    };
+
     // --- 送出資料 ---
     const handleSubmit = () => {
         if (!mainTitle.trim()) {
@@ -300,17 +323,33 @@ export default function AddTaskScreen() {
                 <Text style={styles.sectionTitle}>New Task</Text>
 
                 <Text style={styles.label}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScrollContent}>
-                    {CATEGORIES.map(cat => (
-                        <TouchableOpacity
-                            key={cat}
-                            style={[styles.chip, category === cat && styles.chipSelected]}
-                            onPress={() => setCategory(cat)}
-                        >
-                            <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>{cat}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                <View 
+                    onLayout={handleCategoryContainerLayout}
+                    style={styles.categoryContainer}
+                >
+                    {useCategoryDropdown ? (
+                        // Dropdown when categories would overflow
+                        <FilterDropdown
+                            label=""
+                            selectedValue={category}
+                            options={CATEGORIES}
+                            onSelect={(value) => setCategory(value as typeof CATEGORIES[number])}
+                        />
+                    ) : (
+                        // Horizontal scroll chips when categories fit
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScrollContent}>
+                            {CATEGORIES.map(cat => (
+                                <TouchableOpacity
+                                    key={cat}
+                                    style={[styles.chip, category === cat && styles.chipSelected]}
+                                    onPress={() => setCategory(cat)}
+                                >
+                                    <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>{cat}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
+                </View>
 
                 <TextInput
                     style={styles.mainInput}
@@ -320,7 +359,7 @@ export default function AddTaskScreen() {
                 />
 
                 <View style={styles.rowInput}>
-                    <View style={{ width: 120 }}>
+                    <View style={styles.timeContainer}>
                         <Text style={styles.label}>Time (min)</Text>
                         <View style={[styles.timeBox, isTimeReadOnly && styles.timeBoxDisabled]}>
                             <TextInput
@@ -333,7 +372,7 @@ export default function AddTaskScreen() {
                             />
                         </View>
                     </View>
-                    <View style={{ flex: 1, paddingLeft: 16 }}>
+                    <View style={styles.tagsContainer}>
                         <Text style={styles.label}>Tags</Text>
                         <View style={{ marginTop: 8 }}>
                             <TagDisplayRow tags={mainTags} onEdit={() => openTagModal('main')} tagGroupColors={tagGroupColors} />
@@ -360,7 +399,7 @@ export default function AddTaskScreen() {
                             <Text style={styles.aiButtonText}>AI Generate</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={addSubtask}>
+                        <TouchableOpacity onPress={addSubtask} style={styles.addSubtaskButton}>
                             <Text style={styles.addLink}>+ Add Subtask</Text>
                         </TouchableOpacity>
                     </View>
@@ -571,6 +610,7 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 16 },
 
     // Category Optimizations
+    categoryContainer: { width: '100%' },
     catScrollContent: { paddingBottom: 8, gap: 12 },
     chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, backgroundColor: '#f0f0f0' },
     chipSelected: { backgroundColor: '#333' },
@@ -580,7 +620,9 @@ const styles = StyleSheet.create({
     mainInput: { fontSize: 24, fontWeight: '600', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee', marginBottom: 16, marginTop: 8 },
     label: { fontSize: 13, fontWeight: '600', color: '#888', marginBottom: 6 },
 
-    rowInput: { flexDirection: 'row', marginBottom: 20 },
+    rowInput: { flexDirection: 'row', marginBottom: 20, flexWrap: 'wrap', gap: 16 },
+    timeContainer: { width: 120, minWidth: 120, flexShrink: 0 },
+    tagsContainer: { flex: 1, minWidth: 200, flexShrink: 1 },
     timeBox: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#fff' },
     timeBoxDisabled: { backgroundColor: '#f5f5f5', borderColor: '#eee' },
     timeInput: { fontSize: 16, fontWeight: '600', color: '#333', textAlign: 'center' },
@@ -589,8 +631,9 @@ const styles = StyleSheet.create({
     textArea: { height: 80, textAlignVertical: 'top' },
 
     // Subtask Header & AI Button
-    subtaskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
-    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    subtaskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 24, marginBottom: 12, flexWrap: 'wrap', gap: 12 },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 1 },
+    addSubtaskButton: { flexShrink: 0 },
     addLink: { color: '#2196f3', fontWeight: '600' },
 
     aiButton: {
@@ -605,6 +648,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
+        flexShrink: 0, // Prevent AI button from shrinking
     },
     aiButtonText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 

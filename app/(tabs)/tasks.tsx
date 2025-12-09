@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
-  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput, Keyboard
+  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useResponsive } from '@/hooks/use-responsive';
 
 // --- 資料型別 ---
 interface TaskItem {
@@ -120,6 +121,7 @@ const EditableField = ({
 
 export default function TasksScreen() {
   const router = useRouter();
+  const responsive = useResponsive();
 
   // 1. 將資料轉為 State，這樣才能修改
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
@@ -173,9 +175,14 @@ export default function TasksScreen() {
     const completedSub = item.subtasks.filter(s => s.isCompleted).length;
     const progressPercent = totalSub > 0 ? (completedSub / totalSub) * 100 : (item.isCompleted ? 100 : 0);
 
+    // Responsive styles
+    const taskHeaderPadding = responsive.isMobile ? 16 : responsive.isTablet ? 20 : 24;
+    const taskTitleSize = responsive.isMobile ? 18 : responsive.isTablet ? 20 : 22;
+    const taskDescSize = responsive.isMobile ? 14 : responsive.isTablet ? 15 : 16;
+
     return (
       <View style={styles.card}>
-        <View style={styles.taskHeader}>
+        <View style={[styles.taskHeader, { padding: taskHeaderPadding }]}>
 
           {/* 上半部：類別與標題 */}
           <View style={styles.headerTop}>
@@ -187,7 +194,7 @@ export default function TasksScreen() {
             <View style={{ flex: 1 }}>
               <EditableField
                 value={item.title}
-                textStyle={styles.taskTitle}
+                textStyle={[styles.taskTitle, { fontSize: taskTitleSize }]}
                 onSave={(val) => updateTaskField(item.id, 'title', val)}
               />
             </View>
@@ -204,7 +211,7 @@ export default function TasksScreen() {
           <EditableField
             value={item.description}
             placeholder="新增描述..."
-            textStyle={styles.taskDesc}
+            textStyle={[styles.taskDesc, { fontSize: taskDescSize }]}
             onSave={(val) => updateTaskField(item.id, 'description', val)}
           />
 
@@ -253,8 +260,11 @@ export default function TasksScreen() {
         {/* 展開子任務 */}
         {isExpanded && hasSubtasks && (
           <View style={styles.subtaskList}>
-            {item.subtasks.map((sub) => (
-              <View key={sub.id} style={styles.subtaskContainer}>
+            {item.subtasks.map((sub) => {
+              const subtaskPaddingH = responsive.isMobile ? 16 : responsive.isTablet ? 20 : 24;
+              const subtaskPaddingV = responsive.isMobile ? 12 : responsive.isTablet ? 14 : 16;
+              return (
+              <View key={sub.id} style={[styles.subtaskContainer, { paddingHorizontal: subtaskPaddingH, paddingVertical: subtaskPaddingV }]}>
                 <View style={styles.subtaskRow}>
                   {/* 完成勾選 */}
                   <TouchableOpacity onPress={() => updateTaskField(sub.id, 'isCompleted', !sub.isCompleted)}>
@@ -297,27 +307,47 @@ export default function TasksScreen() {
                   <TagsDisplay tags={sub.tags} />
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
     );
   };
 
+  // Responsive styles for header, list, and FAB
+  const headerPadding = responsive.isMobile ? 20 : responsive.isTablet ? 24 : 32;
+  const listPadding = responsive.isMobile ? 16 : responsive.isTablet ? 24 : 32;
+  const fabSize = responsive.isMobile ? 60 : responsive.isTablet ? 64 : 68;
+  const fabIconSize = responsive.isMobile ? 32 : responsive.isTablet ? 34 : 36;
+  const headerTitleSize = responsive.isMobile ? 24 : responsive.isTablet ? 26 : 28;
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Task List</Text>
+      <View style={[styles.header, { padding: headerPadding }]}>
+        <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>Task List</Text>
       </View>
       <FlatList
         data={structuredTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { padding: listPadding }]}
         keyboardShouldPersistTaps="handled" // 讓點擊輸入框外的區域能關閉鍵盤
       />
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/add_task')}>
-        <Ionicons name="add" size={32} color="white" />
+      <TouchableOpacity 
+        style={[
+          styles.fab, 
+          { 
+            width: fabSize, 
+            height: fabSize, 
+            borderRadius: fabSize / 2,
+            right: responsive.isDesktop ? 32 : 20,
+            bottom: responsive.isDesktop ? 40 : 30,
+          }
+        ]} 
+        onPress={() => router.push('/add_task')}
+      >
+        <Ionicons name="add" size={fabIconSize} color="white" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -335,20 +365,20 @@ const TagsDisplay = ({ tags }: { tags: TaskItem['tags'] }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
-  header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  listContent: { padding: 16, paddingBottom: 80 },
+  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  headerTitle: { fontWeight: 'bold', color: '#333' },
+  listContent: { paddingBottom: 80 },
   card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, overflow: 'hidden', elevation: 2 },
 
-  taskHeader: { padding: 16 },
+  taskHeader: {},
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
   categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
   categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
 
   // Editable Styles
   inputWrapper: { borderBottomWidth: 1, borderBottomColor: '#2196f3', paddingBottom: 2 },
-  taskTitle: { fontSize: 18, fontWeight: '600', color: '#333', paddingVertical: 2 },
-  taskDesc: { fontSize: 14, color: '#666', marginBottom: 10, minHeight: 20 },
+  taskTitle: { fontWeight: '600', color: '#333', paddingVertical: 2 },
+  taskDesc: { color: '#666', marginBottom: 10, minHeight: 20 },
 
   // Progress & Time
   progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
@@ -362,7 +392,7 @@ const styles = StyleSheet.create({
 
   // Subtasks
   subtaskList: { backgroundColor: '#FAFAFA', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingVertical: 4 },
-  subtaskContainer: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  subtaskContainer: { borderBottomWidth: 1, borderBottomColor: '#eee' },
   subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
   subtaskText: { fontSize: 15, color: '#333', fontWeight: '500' },
   subtaskDesc: { fontSize: 13, color: '#999', marginTop: 2 },
@@ -377,5 +407,5 @@ const styles = StyleSheet.create({
   miniTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   miniTagText: { fontSize: 10, fontWeight: '600' },
 
-  fab: { position: 'absolute', right: 20, bottom: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: '#2196f3', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  fab: { position: 'absolute', backgroundColor: '#2196f3', justifyContent: 'center', alignItems: 'center', elevation: 5 },
 });

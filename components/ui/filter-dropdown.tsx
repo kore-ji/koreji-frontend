@@ -113,7 +113,7 @@ export function FilterDropdown<T extends string>({
             {getDisplayText()}
           </Text>
         </View>
-        <Ionicons name="chevron-down" size={16} color="#4CAF50" style={styles.chevron} />
+        <Ionicons name="chevron-down" size={16} color="#666666" style={styles.chevron} />
       </Pressable>
 
       <Modal
@@ -234,14 +234,14 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: '#666666',
   },
   filterValueBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: '#CCCCCC',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   filterValue: {
     fontSize: 13,
-    color: '#4CAF50',
+    color: '#333333',
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 18,
