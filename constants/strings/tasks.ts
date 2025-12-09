@@ -11,6 +11,7 @@ const TASK_SCREEN_STRINGS = {
     categoryLabel: 'Category',
     timeLabel: 'Time (min)',
     tagsLabel: 'Tags',
+    subtaskTagsLabel: 'Tags',
     
     // Placeholders
     taskTitlePlaceholder: 'Task title',

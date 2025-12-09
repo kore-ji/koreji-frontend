@@ -13,6 +13,7 @@ interface TagDisplayRowProps {
 
 // Default color mapping for different tag groups
 const DEFAULT_TAG_GROUP_COLORS: { [key: string]: { bg: string; text: string } } = {
+    Category: { bg: '#333333', text: '#FFFFFF' },
     Priority: { bg: '#FFF3E0', text: '#E65100' },
     Attention: { bg: '#F3E5F5', text: '#7B1FA2' },
     Tools: { bg: '#E3F2FD', text: '#1565C0' },
@@ -26,13 +27,13 @@ export function TagDisplayRow({ tags, onEdit, tagGroupColors }: TagDisplayRowPro
             <View style={styles.tagRow}>
                 {tags.tagGroups && Object.entries(tags.tagGroups).map(([groupName, selectedTags]) =>
                     (selectedTags || []).map((tag: string) => {
-                        const groupColors = colors[groupName] || { bg: '#E8F5E9', text: '#2E7D32' };
+                        const groupColors = colors[groupName] || { bg: '#E8F5E9', text: '#FFFFFF' };
                         return (
                             <View key={`${groupName}-${tag}`} style={[styles.miniTag, { backgroundColor: groupColors.bg }]}>
                                 {groupName === 'Place' && (
-                                    <Ionicons name="location" size={10} color="#333" />
+                                    <Ionicons name="location" size={10} color="#FFFFFF" />
                                 )}
-                                <Text style={[styles.miniTagText, { color: '#333' }]}>
+                                <Text style={[styles.miniTagText, { color: '#FFFFFF' }]}>
                                     {tag}
                                 </Text>
                             </View>

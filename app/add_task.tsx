@@ -1,11 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TagDisplayRow, type TaskTags } from '@/components/ui/tag-display-row';
-import { FilterDropdown } from '@/components/ui/filter-dropdown';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 
 // --- 常數定義 ---
@@ -13,6 +12,12 @@ const DEFAULT_CATEGORIES = ['School', 'Home', 'Work', 'Personal'];
 
 // Tag groups configuration
 const TAG_GROUPS: { [groupName: string]: { tags: string[]; isSingleSelect: boolean; allowAddTags: boolean; color: { bg: string; text: string } } } = {
+    Category: {
+        tags: DEFAULT_CATEGORIES,
+        isSingleSelect: true,
+        allowAddTags: true,
+        color: { bg: '#333333', text: '#FFFFFF' },
+    },
     Priority: {
         tags: ['High', 'Medium', 'Low'],
         isSingleSelect: true,
@@ -40,7 +45,7 @@ const TAG_GROUPS: { [groupName: string]: { tags: string[]; isSingleSelect: boole
 };
 
 // Default tag group order (creation order)
-const DEFAULT_TAG_GROUP_ORDER = ['Priority', 'Attention', 'Tools', 'Place'];
+const DEFAULT_TAG_GROUP_ORDER = ['Category', 'Priority', 'Attention', 'Tools', 'Place'];
 
 // Available colors for new tag groups
 const TAG_GROUP_COLORS = [
@@ -67,17 +72,16 @@ interface LocalSubTask {
 
 export default function AddTaskScreen() {
     const router = useRouter();
-    const [useCategoryDropdown, setUseCategoryDropdown] = useState(false);
-    const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-    const [showAddCategory, setShowAddCategory] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
 
     // --- 主任務狀態 ---
     const [mainTitle, setMainTitle] = useState('');
     const [mainDesc, setMainDesc] = useState('');
-    const [category, setCategory] = useState(DEFAULT_CATEGORIES[0]);
     const [mainTime, setMainTime] = useState('');
-    const [mainTags, setMainTags] = useState<TaskTags>({ tagGroups: {} });
+    const [mainTags, setMainTags] = useState<TaskTags>({ 
+        tagGroups: { 
+            Category: [DEFAULT_CATEGORIES[0]] 
+        } 
+    });
 
     // --- 子任務列表 ---
     const [subtasks, setSubtasks] = useState<LocalSubTask[]>([]);
@@ -129,7 +133,11 @@ export default function AddTaskScreen() {
             setTempTags({ ...mainTags });
         } else {
             const sub = subtasks.find(s => s.id === target);
-            if (sub) setTempTags({ ...sub.tags });
+            if (sub) {
+                // Remove Category from subtask tags
+                const { Category, ...subTagsWithoutCategory } = sub.tags.tagGroups || {};
+                setTempTags({ tagGroups: subTagsWithoutCategory });
+            }
         }
         setShowTagGroupInput(false);
         setNewTagGroupName('');
@@ -141,7 +149,9 @@ export default function AddTaskScreen() {
         if (editingTarget === 'main') {
             setMainTags(tempTags);
         } else if (typeof editingTarget === 'string') {
-            setSubtasks(prev => prev.map(s => s.id === editingTarget ? { ...s, tags: tempTags } : s));
+            // Ensure Category is removed from subtask tags
+            const { Category, ...tagsWithoutCategory } = tempTags.tagGroups || {};
+            setSubtasks(prev => prev.map(s => s.id === editingTarget ? { ...s, tags: { tagGroups: tagsWithoutCategory } } : s));
         }
         setEditingTarget(null);
         setShowTagGroupInput(false);
@@ -235,10 +245,27 @@ export default function AddTaskScreen() {
 
     const handleSaveTagToGroup = () => {
         if (editingTagInGroup && newTagInGroupName.trim() && !tagGroups[editingTagInGroup.groupName]?.includes(newTagInGroupName.trim())) {
+            const trimmedTag = newTagInGroupName.trim();
             setTagGroups(prev => ({
                 ...prev,
-                [editingTagInGroup.groupName]: [...(prev[editingTagInGroup.groupName] || []), newTagInGroupName.trim()]
+                [editingTagInGroup.groupName]: [...(prev[editingTagInGroup.groupName] || []), trimmedTag]
             }));
+            
+            // If adding to Category group and it's currently selected in tempTags, auto-select it
+            if (editingTagInGroup.groupName === 'Category') {
+                const currentTagGroups = tempTags.tagGroups || {};
+                const groupConfig = TAG_GROUPS['Category'] || { isSingleSelect: true };
+                if (groupConfig.isSingleSelect) {
+                    // Auto-select the newly added category
+                    setTempTags({
+                        ...tempTags,
+                        tagGroups: {
+                            ...currentTagGroups,
+                            Category: [trimmedTag]
+                        }
+                    });
+                }
+            }
         }
         setEditingTagInGroup(null);
         setNewTagInGroupName('');
@@ -264,48 +291,6 @@ export default function AddTaskScreen() {
         setSubtasks(prev => prev.filter(s => s.id !== id));
     };
 
-    // Ensure selected category exists in categories list
-    useEffect(() => {
-        if (!categories.includes(category) && categories.length > 0) {
-            setCategory(categories[0]);
-        }
-    }, [categories, category]);
-
-    // Add new category
-    const handleAddCategory = () => {
-        const trimmedName = newCategoryName.trim();
-        if (trimmedName && !categories.includes(trimmedName)) {
-            const newCategories = [...categories, trimmedName];
-            setCategories(newCategories);
-            setCategory(trimmedName); // Select the newly added category
-            setNewCategoryName('');
-            setShowAddCategory(false);
-        }
-    };
-
-    // Check if category chips would overflow based on container width
-    const handleCategoryContainerLayout = (event: any) => {
-        const { width } = event.nativeEvent.layout;
-        if (width > 0) {
-            // Estimate total width needed for all chips
-            // Each chip: horizontal padding (16*2 = 32px) + text width (varies by category name)
-            // Gap between chips: 12px
-            const chipPadding = 32; // 16px * 2
-            const gap = 12;
-            // Calculate estimated width for each category based on text length
-            // Rough estimation: ~9px per character for font size 14, font weight 500
-            const estimatedWidths = categories.map(cat => {
-                const estimatedTextWidth = cat.length * 9;
-                return chipPadding + estimatedTextWidth;
-            });
-            // Add space for the add button if showing chips
-            const addButtonWidth = 40; // Approximate width of add button
-            const totalWidthNeeded = estimatedWidths.reduce((sum, w) => sum + w, 0) + (categories.length - 1) * gap + (useCategoryDropdown ? 0 : addButtonWidth);
-            // Add buffer (20px) to account for measurement variations and rounding
-            setUseCategoryDropdown(totalWidthNeeded + 20 > width);
-        }
-    };
-
     // --- 送出資料 ---
     const handleSubmit = () => {
         if (!mainTitle.trim()) {
@@ -318,13 +303,16 @@ export default function AddTaskScreen() {
 
         const mainId = Date.now().toString();
         const createdAt = Date.now();
+        
+        // Extract category from tags (Category tag group, first selected tag)
+        const categoryFromTags = mainTags.tagGroups?.Category?.[0] || null;
 
         const mainTaskPayload = {
             id: mainId,
             parentId: null,
             title: mainTitle,
             description: mainDesc,
-            category,
+            category: categoryFromTags,
             estimatedTime: parseInt(calculatedTotalTime) || 0,
             tags: mainTags,
             isCompleted: false,
@@ -353,90 +341,6 @@ export default function AddTaskScreen() {
         <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
-                <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.categoryLabel}</Text>
-                <View 
-                    onLayout={handleCategoryContainerLayout}
-                    style={styles.categoryContainer}
-                >
-                    {useCategoryDropdown ? (
-                        // Dropdown when categories would overflow
-                        <FilterDropdown
-                            label=""
-                            selectedValue={category}
-                            options={categories}
-                            onSelect={(value) => setCategory(Array.isArray(value) ? value[0] : value)}
-                            onAddNew={{
-                                showInput: showAddCategory,
-                                inputValue: newCategoryName,
-                                onInputChange: (value) => {
-                                    if (value === '__SHOW_INPUT__') {
-                                        setShowAddCategory(true);
-                                        setNewCategoryName('');
-                                    } else {
-                                        setNewCategoryName(value);
-                                    }
-                                },
-                                onSave: handleAddCategory,
-                                onCancel: () => {
-                                    setShowAddCategory(false);
-                                    setNewCategoryName('');
-                                },
-                                placeholder: TASK_SCREEN_STRINGS.addTask.newCategoryPlaceholder,
-                            }}
-                        />
-                    ) : (
-                        // Horizontal scroll chips when categories fit
-                        <View style={styles.categoryChipsWrapper}>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catScrollContent}>
-                                {categories.map(cat => (
-                                    <TouchableOpacity
-                                        key={cat}
-                                        style={[styles.chip, category === cat && styles.chipSelected]}
-                                        onPress={() => setCategory(cat)}
-                                    >
-                                        <Text style={[styles.chipText, category === cat && styles.chipTextSelected]}>{cat}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                                {showAddCategory ? (
-                                    <View style={styles.newPlaceInputContainer}>
-                                        <TextInput
-                                            style={styles.newPlaceInput}
-                                            placeholder={TASK_SCREEN_STRINGS.addTask.newCategoryPlaceholder}
-                                            value={newCategoryName}
-                                            onChangeText={setNewCategoryName}
-                                            autoFocus
-                                            onSubmitEditing={handleAddCategory}
-                                        />
-                                        <TouchableOpacity 
-                                            style={styles.savePlaceBtn}
-                                            onPress={handleAddCategory}
-                                            disabled={!newCategoryName.trim()}
-                                        >
-                                            <Ionicons name="checkmark" size={16} color={newCategoryName.trim() ? "#4CAF50" : "#ccc"} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity 
-                                            style={styles.cancelPlaceBtn}
-                                            onPress={() => {
-                                                setShowAddCategory(false);
-                                                setNewCategoryName('');
-                                            }}
-                                        >
-                                            <Ionicons name="close" size={16} color="#666" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity 
-                                        style={styles.addCategoryChip}
-                                        onPress={() => setShowAddCategory(true)}
-                                    >
-                                        <Ionicons name="add" size={18} color="#666" />
-                                    </TouchableOpacity>
-                                )}
-                            </ScrollView>
-                        </View>
-                    )}
-                </View>
-
                 <TextInput
                     style={styles.mainInput}
                     placeholder={TASK_SCREEN_STRINGS.addTask.taskTitlePlaceholder}
@@ -444,25 +348,24 @@ export default function AddTaskScreen() {
                     onChangeText={setMainTitle}
                 />
 
-                <View style={styles.rowInput}>
-                    <View style={styles.timeContainer}>
-                        <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.timeLabel}</Text>
-                        <View style={[styles.timeBox, isTimeReadOnly && styles.timeBoxDisabled]}>
-                            <TextInput
-                                style={[styles.timeInput, isTimeReadOnly && { color: '#888' }]}
-                                keyboardType="numeric"
-                                value={isTimeReadOnly ? calculatedTotalTime : mainTime}
-                                onChangeText={setMainTime}
-                                editable={!isTimeReadOnly}
-                                placeholder={TASK_SCREEN_STRINGS.addTask.timePlaceholder}
-                            />
-                        </View>
+                <View style={styles.timeContainer}>
+                    <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.timeLabel}</Text>
+                    <View style={[styles.timeBox, isTimeReadOnly && styles.timeBoxDisabled]}>
+                        <TextInput
+                            style={[styles.timeInput, isTimeReadOnly && { color: '#888' }]}
+                            keyboardType="numeric"
+                            value={isTimeReadOnly ? calculatedTotalTime : mainTime}
+                            onChangeText={setMainTime}
+                            editable={!isTimeReadOnly}
+                            placeholder={TASK_SCREEN_STRINGS.addTask.timePlaceholder}
+                        />
                     </View>
-                    <View style={styles.tagsContainer}>
-                        <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
-                        <View style={{ marginTop: 8 }}>
-                            <TagDisplayRow tags={mainTags} onEdit={() => openTagModal('main')} tagGroupColors={tagGroupColors} />
-                        </View>
+                </View>
+
+                <View style={styles.tagsContainer}>
+                    <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
+                    <View style={{ marginTop: 8 }}>
+                        <TagDisplayRow tags={mainTags} onEdit={() => openTagModal('main')} tagGroupColors={tagGroupColors} />
                     </View>
                 </View>
 
@@ -526,7 +429,10 @@ export default function AddTaskScreen() {
 
                             {/* Row 3: Tags */}
                             <View style={styles.stTagContainer}>
-                                <TagDisplayRow tags={sub.tags} onEdit={() => openTagModal(sub.id)} tagGroupColors={tagGroupColors} />
+                                <Text style={styles.label}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
+                                <View style={{ marginTop: 8 }}>
+                                    <TagDisplayRow tags={sub.tags} onEdit={() => openTagModal(sub.id)} tagGroupColors={tagGroupColors} />
+                                </View>
                             </View>
                         </View>
                     ))}
@@ -553,7 +459,15 @@ export default function AddTaskScreen() {
 
                         <ScrollView style={{ maxHeight: 400 }}>
     {/* All Tag Groups */}
-    {tagGroupOrder.map(groupName => {
+    {tagGroupOrder
+        .filter(groupName => {
+            // Exclude Category for subtasks
+            if (editingTarget !== 'main' && groupName === 'Category') {
+                return false;
+            }
+            return true;
+        })
+        .map(groupName => {
         const tags = tagGroups[groupName];
         if (!tags) return null;
         const groupConfig = TAG_GROUPS[groupName] || { isSingleSelect: false, allowAddTags: true };
@@ -579,6 +493,9 @@ export default function AddTaskScreen() {
                             backgroundColor: groupColor.bg,
                             borderColor: groupColor.text,
                         };
+                        const selectedTextStyle = {
+                            color: groupColor.text,
+                        };
                         
                         return (
                             <TouchableOpacity
@@ -592,7 +509,7 @@ export default function AddTaskScreen() {
                             >
                                 <Text style={[
                                     styles.chipText,
-                                    tagIsSelected && styles.chipTextSelected
+                                    tagIsSelected && selectedTextStyle
                                 ]}>
                                     {tag}
                                 </Text>
@@ -729,9 +646,8 @@ const styles = StyleSheet.create({
     mainInput: { fontSize: 24, fontWeight: '600', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee', marginBottom: 16, marginTop: 8 },
     label: { fontSize: 13, fontWeight: '600', color: '#888', marginBottom: 6 },
 
-    rowInput: { flexDirection: 'row', marginBottom: 20, flexWrap: 'wrap', gap: 16 },
-    timeContainer: { width: 120, minWidth: 120, flexShrink: 0 },
-    tagsContainer: { flex: 1, minWidth: 200, flexShrink: 1 },
+    timeContainer: { marginBottom: 20, width: 120 },
+    tagsContainer: { marginBottom: 20 },
     timeBox: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#fff' },
     timeBoxDisabled: { backgroundColor: '#f5f5f5', borderColor: '#eee' },
     timeInput: { fontSize: 16, fontWeight: '600', color: '#333', textAlign: 'center' },
