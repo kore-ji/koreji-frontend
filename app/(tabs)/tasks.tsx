@@ -156,7 +156,7 @@ export default function TasksScreen() {
       const parentTask = parentId ? prevTasks.find(t => t.id === parentId) : null;
 
       // Update the target task first
-      const updatedTasks = prevTasks.map(t => (t.id === id ? { ...t, [field]: value } : t));
+      let nextTasks = prevTasks.map(t => (t.id === id ? { ...t, [field]: value } : t));
 
       const shouldBumpParent =
         field === 'status' &&
@@ -164,9 +164,26 @@ export default function TasksScreen() {
         parentId &&
         parentTask?.status === 'Not started';
 
-      if (!shouldBumpParent) return updatedTasks;
+      if (shouldBumpParent) {
+        nextTasks = nextTasks.map(t => (t.id === parentId ? { ...t, status: 'In progress' } : t));
+      }
 
-      return updatedTasks.map(t => (t.id === parentId ? { ...t, status: 'In progress' } : t));
+      const shouldCompleteChildren =
+        field === 'status' &&
+        (value === 'Done' || value === 'Archive');
+
+      if (shouldCompleteChildren) {
+        nextTasks = nextTasks.map(t => {
+          const isChild = t.parentId === id;
+          const targetStatus = value;
+          const shouldUpdateChild = targetStatus === 'Archive'
+            ? t.status !== 'Archive' // archive all non-archived children (including Done)
+            : t.status === 'Not started' || t.status === 'In progress'; // only bump incomplete to Done
+          return isChild && shouldUpdateChild ? { ...t, status: targetStatus } : t;
+        });
+      }
+
+      return nextTasks;
     });
     console.log(`[DB Update] Task ${id}: ${field} = ${value}`);
   };
