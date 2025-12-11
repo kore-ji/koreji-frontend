@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { type TaskStatus } from '@/types/task-status';
 import { Task } from '@/components/task-recommend/task-card';
 import { TaskList } from '@/components/task-recommend/task-list';
 import { TaskRecommendHeader } from '@/components/task-recommend/task-recommend-header';

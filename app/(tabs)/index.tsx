@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, Pressable, View, Text, Platform } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, Pressable, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { TaskMode, TaskPlace, TaskTool } from '@/constants/task-filters';
@@ -16,67 +16,6 @@ export default function HomeScreen() {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(20);
 
-  // Hover states for web platform
-  const [hoursIncHovered, setHoursIncHovered] = useState(false);
-  const [hoursDecHovered, setHoursDecHovered] = useState(false);
-  const [minutesIncHovered, setMinutesIncHovered] = useState(false);
-  const [minutesDecHovered, setMinutesDecHovered] = useState(false);
-
-  // Refs for managing long press intervals
-  const hoursIncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoursDecTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const minutesIncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const minutesDecTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoursIncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hoursDecIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const minutesIncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const minutesDecIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      [hoursIncTimeoutRef, hoursDecTimeoutRef, minutesIncTimeoutRef, minutesDecTimeoutRef].forEach(
-        (ref) => {
-          if (ref.current) clearTimeout(ref.current);
-        }
-      );
-      [
-        hoursIncIntervalRef,
-        hoursDecIntervalRef,
-        minutesIncIntervalRef,
-        minutesDecIntervalRef,
-      ].forEach((ref) => {
-        if (ref.current) clearInterval(ref.current);
-      });
-    };
-  }, []);
-
-  const startContinuousAction = (
-    action: () => void,
-    timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
-    intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>
-  ) => {
-    // Start interval after a delay (long press threshold)
-    timeoutRef.current = setTimeout(() => {
-      intervalRef.current = setInterval(() => {
-        action();
-      }, 100); // Execute every 100ms for fast continuous action
-    }, 500); // Wait 500ms before starting continuous action
-  };
-
-  const stopContinuousAction = (
-    timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
-    intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>
-  ) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
   const [selectedMode, setSelectedMode] = useState<TaskMode>(TaskMode.NO_SELECT);
   const [selectedPlace, setSelectedPlace] = useState<TaskPlace>(TaskPlace.NO_SELECT);
   const [selectedTool, setSelectedTool] = useState<TaskTool[]>([TaskTool.NO_SELECT]);
@@ -167,17 +106,11 @@ export default function HomeScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
-                (pressed || (Platform.OS === 'web' && hoursIncHovered)) && styles.circleButtonPressed,
+                pressed && styles.circleButtonPressed,
               ]}
               testID="increment-hours"
               onPress={incrementHours}
-              onPressIn={() =>
-                startContinuousAction(incrementHours, hoursIncTimeoutRef, hoursIncIntervalRef)
-              }
-              onPressOut={() => stopContinuousAction(hoursIncTimeoutRef, hoursIncIntervalRef)}
-              onHoverIn={() => Platform.OS === 'web' && setHoursIncHovered(true)}
-              onHoverOut={() => Platform.OS === 'web' && setHoursIncHovered(false)}
-              android_ripple={{ color: '#cccccc' }}
+              hitSlop={8}
             >
               <Ionicons name="chevron-up" size={20} color="#333333" />
             </Pressable>
@@ -189,17 +122,11 @@ export default function HomeScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
-                (pressed || (Platform.OS === 'web' && hoursDecHovered)) && styles.circleButtonPressed,
+                pressed && styles.circleButtonPressed,
               ]}
               testID="decrement-hours"
               onPress={decrementHours}
-              onPressIn={() =>
-                startContinuousAction(decrementHours, hoursDecTimeoutRef, hoursDecIntervalRef)
-              }
-              onPressOut={() => stopContinuousAction(hoursDecTimeoutRef, hoursDecIntervalRef)}
-              onHoverIn={() => Platform.OS === 'web' && setHoursDecHovered(true)}
-              onHoverOut={() => Platform.OS === 'web' && setHoursDecHovered(false)}
-              android_ripple={{ color: '#cccccc' }}
+              hitSlop={8}
             >
               <Ionicons name="chevron-down" size={20} color="#333333" />
             </Pressable>
@@ -211,21 +138,11 @@ export default function HomeScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
-                (pressed || (Platform.OS === 'web' && minutesIncHovered)) && styles.circleButtonPressed,
+                pressed && styles.circleButtonPressed,
               ]}
               testID="increment-minutes"
               onPress={incrementMinutes}
-              onPressIn={() =>
-                startContinuousAction(
-                  incrementMinutes,
-                  minutesIncTimeoutRef,
-                  minutesIncIntervalRef
-                )
-              }
-              onPressOut={() => stopContinuousAction(minutesIncTimeoutRef, minutesIncIntervalRef)}
-              onHoverIn={() => Platform.OS === 'web' && setMinutesIncHovered(true)}
-              onHoverOut={() => Platform.OS === 'web' && setMinutesIncHovered(false)}
-              android_ripple={{ color: '#cccccc' }}
+              hitSlop={8}
             >
               <Ionicons name="chevron-up" size={20} color="#333333" />
             </Pressable>
@@ -237,21 +154,11 @@ export default function HomeScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.circleButton,
-                (pressed || (Platform.OS === 'web' && minutesDecHovered)) && styles.circleButtonPressed,
+                pressed && styles.circleButtonPressed,
               ]}
               testID="decrement-minutes"
               onPress={decrementMinutes}
-              onPressIn={() =>
-                startContinuousAction(
-                  decrementMinutes,
-                  minutesDecTimeoutRef,
-                  minutesDecIntervalRef
-                )
-              }
-              onPressOut={() => stopContinuousAction(minutesDecTimeoutRef, minutesDecIntervalRef)}
-              onHoverIn={() => Platform.OS === 'web' && setMinutesDecHovered(true)}
-              onHoverOut={() => Platform.OS === 'web' && setMinutesDecHovered(false)}
-              android_ripple={{ color: '#cccccc' }}
+              hitSlop={8}
             >
               <Ionicons name="chevron-down" size={20} color="#333333" />
             </Pressable>
