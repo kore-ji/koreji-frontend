@@ -142,7 +142,7 @@ export function FilterDropdown<T extends string>({
         >
           <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label}</Text>
+              <Text style={styles.modalTitle} testID="filter-modal-title">Select {label}</Text>
               <Pressable onPress={() => setIsOpen(false)}>
                 <Ionicons name="close" size={24} color="#333333" />
               </Pressable>

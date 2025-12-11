@@ -1,5 +1,4 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface TagChipProps {
     label: string;
