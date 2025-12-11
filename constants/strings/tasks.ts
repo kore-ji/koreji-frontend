@@ -73,6 +73,11 @@ const TASK_SCREEN_STRINGS = {
     
     // Progress
     progressUnit: '%',
+
+    // Empty state
+    emptyStateTitle: 'All tasks complete',
+    emptyStateSubtitle: 'Great job staying on top of things.\nAdd a new task when you are ready.',
+    emptyStateAction: 'Add a task',
   },
 };
 

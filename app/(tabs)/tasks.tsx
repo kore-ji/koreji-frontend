@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput, Modal, Pressable
 } from 'react-native';
@@ -12,6 +12,7 @@ import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
+import { get, ApiClientError, ApiErrorType } from '@/services/api/client';
 
 const getSubtaskPadding = (responsive: ReturnType<typeof useResponsive>) => {
   if (responsive.isMobile) return STYLE_CONSTANTS.subtaskPadding.mobile;
@@ -39,30 +40,57 @@ interface TaskItem {
   };
 }
 
-// --- Initial dummy data ---
-const INITIAL_TASKS: TaskItem[] = [
-  
-  {
-    id: '101', parentId: '1', title: '找文獻', description: '至少五篇', estimatedTime: 60, isCompleted: true,
-    status: 'Done',
-    tags: { priority: 'High', attention: 'Focus', tools: ['Computer'], place: 'Library' }
-  },
-  {
-    id: '102', parentId: '1', title: '寫緒論', description: '', estimatedTime: 120, isCompleted: false,
-    status: 'In progress',
-    tags: { priority: 'Medium', attention: 'Focus', tools: ['Computer'], place: 'Dorm' }
-  },
-  {
-    id: '2', parentId: null, title: '整理房間', description: '週末大掃除', category: 'Home', estimatedTime: 45, isCompleted: false,
-    status: 'Not started',
-    tags: { priority: 'Low', attention: 'Relax', tools: [], place: 'Home' }
-  },
-  {
-    id: '1', parentId: null, title: '完成期末報告', description: '包含文獻回顧', category: 'School', estimatedTime: 0, isCompleted: false,
-    status: 'In progress',
-    tags: { tools: ['Computer'] }
-  },
-];
+type BackendTaskStatus = 'pending' | 'in_progress' | 'completed' | 'archived';
+
+interface ApiTaskResponse {
+  id: string;
+  parent_id: string | null;
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  status: BackendTaskStatus;
+  estimated_minutes?: number | null;
+  tags?: unknown[]; // tags not mapped in UI yet
+  subtasks?: ApiTaskResponse[];
+}
+
+const mapStatus = (status: BackendTaskStatus): TaskStatus => {
+  switch (status) {
+    case 'pending':
+      return 'Not started';
+    case 'in_progress':
+      return 'In progress';
+    case 'completed':
+      return 'Done';
+    case 'archived':
+      return 'Archive';
+    default:
+      return 'Not started';
+  }
+};
+
+const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null): TaskItem[] => {
+  const result: TaskItem[] = [];
+  items.forEach((t) => {
+    const taskId = t.id;
+    const task: TaskItem = {
+      id: taskId,
+      parentId: parentId,
+      title: t.title || '',
+      description: t.description || '',
+      category: t.category || undefined,
+      estimatedTime: t.estimated_minutes ?? 0,
+      isCompleted: t.status === 'completed',
+      status: mapStatus(t.status),
+      tags: { tools: [] },
+    };
+    result.push(task);
+    if (t.subtasks?.length) {
+      result.push(...flattenTasks(t.subtasks, taskId));
+    }
+  });
+  return result;
+};
 
 // --- [New Component] Editable text field ---
 // Responsible for handling the switch between displayed text and input field
@@ -144,7 +172,7 @@ export default function TasksScreen() {
   const responsive = useResponsive();
 
   // 1. Convert data to State, so that it can be modified
-  const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [statusPickerVisible, setStatusPickerVisible] = useState<string | null>(null);
   const [statusPickerTaskId, setStatusPickerTaskId] = useState<string | null>(null);
@@ -162,6 +190,8 @@ export default function TasksScreen() {
   const [newTagGroupName, setNewTagGroupName] = useState('');
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // 2. Function to update task data (simulate DB Update)
   const updateTaskField = (id: string, field: keyof TaskItem, value: any) => {
@@ -204,6 +234,34 @@ export default function TasksScreen() {
     });
     console.log(`[DB Update] Task ${id}: ${field} = ${value}`);
   };
+
+  // Fetch tasks from backend
+  useEffect(() => {
+    const fetchTasks = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await get<ApiTaskResponse[]>('/tasks');
+        const flattened = Array.isArray(data) ? flattenTasks(data) : [];
+        setTasks(flattened);
+      } catch (err) {
+        if (err instanceof ApiClientError) {
+          if (err.type === ApiErrorType.CONFIG) {
+            setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError('Unable to load tasks.');
+        }
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
 
   // --- Tag helpers ---
   const buildTaskTagsFromTask = (task: TaskItem): TaskTags => {
@@ -448,6 +506,11 @@ export default function TasksScreen() {
   );
 
   const layout = getLayoutSizes(responsive);
+  const isEmptyState = !loading && !error && structuredTasks.length === 0;
+
+  const handleAddTask = () => {
+    router.push('/add_task');
+  };
 
   const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
     const isExpanded = expandedIds.has(item.id);
@@ -622,11 +685,37 @@ export default function TasksScreen() {
       <View style={[styles.header, { padding: layout.screenHeaderPadding }]}>
         <Text style={[styles.headerTitle, { fontSize: layout.headerTitleSize }]}>{TASK_SCREEN_STRINGS.headerTitle}</Text>
       </View>
+      {loading && (
+        <View style={[styles.infoBanner, { marginHorizontal: layout.listPadding }]}>
+          <Text style={styles.infoText}>Loading tasks…</Text>
+        </View>
+      )}
+      {error && (
+        <View style={[styles.errorBanner, { marginHorizontal: layout.listPadding }]}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
       <FlatList
         data={structuredTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { padding: layout.listPadding }]}
+        contentContainerStyle={[
+          styles.listContent,
+          { padding: layout.listPadding, flexGrow: isEmptyState ? 1 : undefined },
+        ]}
+        ListEmptyComponent={
+          isEmptyState ? (
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.emptyStateCard}>
+                <Text style={styles.emptyStateTitle}>{TASK_SCREEN_STRINGS.tasksList.emptyStateTitle}</Text>
+                <Text style={styles.emptyStateSubtitle}>{TASK_SCREEN_STRINGS.tasksList.emptyStateSubtitle}</Text>
+                <TouchableOpacity style={styles.emptyStateButton} onPress={handleAddTask}>
+                  <Text style={styles.emptyStateButtonText}>{TASK_SCREEN_STRINGS.tasksList.emptyStateAction}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null
+        }
         keyboardShouldPersistTaps="handled" // Allow tapping outside the input field to close the keyboard
       />
       <TouchableOpacity 
@@ -639,8 +728,8 @@ export default function TasksScreen() {
             right: layout.fabPosition.right,
             bottom: layout.fabPosition.bottom,
           }
-        ]} 
-        onPress={() => router.push('/add_task')}
+        ]}
+        onPress={handleAddTask}
       >
         <Ionicons name="add" size={layout.fabIconSize} color="white" />
       </TouchableOpacity>
@@ -892,6 +981,53 @@ const styles = StyleSheet.create({
   },
 
   fab: { position: 'absolute', backgroundColor: '#2196f3', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+
+  infoBanner: {
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+  },
+  infoText: { color: '#0D47A1', fontSize: 13 },
+  errorBanner: {
+    backgroundColor: '#FFEBEE',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  errorText: { color: '#B71C1C', fontSize: 13 },
+  emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyStateCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  emptyStateTitle: { fontSize: 18, fontWeight: '700', color: '#333', textAlign: 'center', marginBottom: 8 },
+  emptyStateSubtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 16 },
+  emptyStateButton: {
+    backgroundColor: '#2196f3',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  emptyStateButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });
 
 const getLayoutSizes = (responsive: ReturnType<typeof useResponsive>) => {
