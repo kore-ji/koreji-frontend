@@ -7,3 +7,4 @@ export const TABLET_MAX = 1024;
 
 export type ScreenSize = 'mobile' | 'tablet' | 'desktop';
 
+
