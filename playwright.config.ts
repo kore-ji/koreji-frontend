@@ -9,8 +9,9 @@ const envBaseURL = process.env.PLAYWRIGHT_BASE_URL;
 const baseURL = envBaseURL ?? defaultBaseURL;
 
 if (!envBaseURL && isPlaywrightCLI) {
-  throw new Error(
-    'PLAYWRIGHT_BASE_URL is not set. Copy .env.example to .env and update the value, or set it inline when running the tests.',
+  // Inform rather than fail; fall back to defaultBaseURL.
+  console.warn(
+    'PLAYWRIGHT_BASE_URL is not set. Using default http://localhost:8081. Set it in .env to silence this warning.',
   );
 }
 
