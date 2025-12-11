@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { type TaskTags } from '@/components/ui/tag-display-row';
