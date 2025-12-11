@@ -368,6 +368,21 @@ export default function TasksScreen() {
 
     const { categoryValue, nextTags } = buildTaskFieldsFromSelection(selection, includeCategory);
 
+    const currentTask = tasks.find((t) => t.id === editingTaskId);
+    if (currentTask) {
+      console.log('[Tag Update] Task:', editingTaskId, 'New tags:', selection.tagGroups);
+      if (includeCategory) {
+        console.log(
+          '[Category Update] Task:',
+          editingTaskId,
+          'From:',
+          currentTask.category || '(none)',
+          'To:',
+          categoryValue || currentTask.category || '(none)'
+        );
+      }
+    }
+
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== editingTaskId) return t;
