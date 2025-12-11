@@ -241,7 +241,7 @@ export default function TasksScreen() {
       : isStatusComplete(item.status) || item.isCompleted
       ? 100
       : 0;
-    const shouldShowProgress = hasProgressFromSubtasks || isStatusComplete(item.status);
+    const shouldShowProgress = hasProgressFromSubtasks;
 
     return (
       <View style={styles.card}>
