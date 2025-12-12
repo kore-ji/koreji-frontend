@@ -734,8 +734,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
-  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
   titleContainer: { flex: 1 },
   expandButton: { padding: 4 },
 
@@ -845,14 +843,29 @@ const styles = StyleSheet.create({
   },
 
   // Tags & Time Editing
-  tagsContainer: { marginTop: 8, gap: 4 },
-  tagsLabel: { fontSize: 12, fontWeight: '600', color: '#666', marginBottom: 4 },
-  subtaskTagsContainer: { marginTop: 8, gap: 4 },
-  tagsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, flexWrap: 'wrap', marginTop: 4 },
-  tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
-  editIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2f2f2', alignItems: 'center', justifyContent: 'center' },
-  subtaskTagsRow: { marginTop: 8 },
+  tagsContainer: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f9f9f9',
+    marginTop: 8,
+  },
+  tagsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888',
+    marginBottom: 6,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginTop: 0,
+  },
+  subtaskTagsContainer: {
+    marginTop: 0,
+  },
   timeTagContainer: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
   tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
   tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },
@@ -879,8 +892,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-  miniTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  miniTagText: { fontSize: 10, fontWeight: '600' },
 
   // Status Badge
   statusBadge: {
