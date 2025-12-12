@@ -686,6 +686,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 12,
     marginBottom: 12,
     overflow: 'hidden',
     borderWidth: 1,
@@ -733,13 +734,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
+  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
+  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
   titleContainer: { flex: 1 },
   expandButton: { padding: 4 },
 
   // Editable Styles
   inputWrapper: { borderBottomWidth: 1, borderBottomColor: '#2196f3', paddingBottom: 2 },
-  taskTitle: { fontWeight: '600', color: '#333', paddingVertical: 2 },
-  taskDesc: { color: '#666', marginBottom: 10, minHeight: 20 },
+  taskTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  taskDesc: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    paddingVertical: 4,
+    minHeight: 20,
+  },
 
   // Progress & Time
   progressRow: {
@@ -831,7 +847,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginLeft: 'auto',
+    marginTop: 8,
   },
   subtaskTimeDeadlineRow: {
     flexDirection: 'row',
@@ -865,6 +881,9 @@ const styles = StyleSheet.create({
   subtaskTagsContainer: {
     marginTop: 0,
   },
+  tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
+  editIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2f2f2', alignItems: 'center', justifyContent: 'center' },
   timeTagContainer: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
   tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
   tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },

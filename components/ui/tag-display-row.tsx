@@ -42,7 +42,7 @@ export function TagDisplayRow({ tags, onEdit, tagGroupColors }: TagDisplayRowPro
                 )}
             </View>
             <TouchableOpacity style={styles.addTagBtn} onPress={onEdit}>
-                <Ionicons name="add" size={18} color="#666" />
+                <Ionicons name="create-outline" size={14} color="#666" />
             </TouchableOpacity>
         </View>
     );
@@ -61,10 +61,10 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     addTagBtn: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: '#f0f0f0',
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#f2f2f2',
         justifyContent: 'center',
         alignItems: 'center',
     },
