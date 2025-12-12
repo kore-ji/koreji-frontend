@@ -7,21 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/use-responsive';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
-import { STYLE_CONSTANTS } from '@/constants/ui';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
 import { DatePickerModal } from '@/components/add-task/date-picker-modal';
-import { type TaskTags } from '@/components/ui/tag-display-row';
+import { type TaskTags, TagDisplayRow } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
 import { get, patch, ApiClientError, ApiErrorType } from '@/services/api/client';
 import { mapStatusFromBackend, mapStatusToBackend, type BackendTaskStatus } from '@/utils/mapping/status';
 import { formatDate } from '@/utils/formatting/date';
-
-const getSubtaskPadding = (responsive: ReturnType<typeof useResponsive>) => {
-  if (responsive.isMobile) return STYLE_CONSTANTS.subtaskPadding.mobile;
-  if (responsive.isTablet) return STYLE_CONSTANTS.subtaskPadding.tablet;
-  return STYLE_CONSTANTS.subtaskPadding.desktop;
-};
 
 const isStatusComplete = (status: TaskStatus) => status === 'Done' || status === 'Archive';
 
@@ -186,6 +179,8 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(false);
   const [hoveredField, setHoveredField] = useState<{ taskId: string; field: string } | null>(null);
   const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: string } | null>(null);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [hoveredSubtaskId, setHoveredSubtaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
 
@@ -604,10 +599,30 @@ export default function TasksScreen() {
       router.push(`/add_task?taskId=${item.id}`);
     };
 
+    // Only show hover if no subtask is hovered
+    const isTaskHovered = hoveredTaskId === item.id && !hoveredSubtaskId;
+
     return (
       <Pressable
         onPress={handleTaskPress}
-        style={styles.card}
+        style={[
+          styles.card,
+          isTaskHovered && Platform.OS === 'web' && styles.cardHovered,
+        ]}
+        {...(Platform.OS === 'web' ? {
+          onMouseEnter: () => {
+            // Only set task hover if no subtask is currently hovered
+            if (!hoveredSubtaskId) {
+              setHoveredTaskId(item.id);
+            }
+          },
+          onMouseLeave: () => {
+            // Only clear if we're not moving to a subtask
+            if (!hoveredSubtaskId) {
+              setHoveredTaskId(null);
+            }
+          },
+        } : {})}
       >
         <View style={[styles.taskHeader, { padding: layout.cardHeaderPadding }]}>
 
@@ -633,8 +648,20 @@ export default function TasksScreen() {
             <View
               style={styles.titleContainer}
               {...(Platform.OS === 'web' ? {
-                onMouseEnter: () => setHoveredField({ taskId: item.id, field: 'title' }),
-                onMouseLeave: () => setHoveredField(null),
+                onMouseEnter: (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  setHoveredTaskId(null); // Clear task container hover
+                  setHoveredField({ taskId: item.id, field: 'title' });
+                },
+                onMouseLeave: (e: React.MouseEvent) => {
+                  setHoveredField(null);
+                  // If mouse is still in task container, restore hover after a short delay
+                  setTimeout(() => {
+                    if (!hoveredSubtaskId) {
+                      setHoveredTaskId(item.id);
+                    }
+                  }, 10);
+                },
               } : {})}
             >
               <EditableField
@@ -659,8 +686,20 @@ export default function TasksScreen() {
           {/* Description (editable) */}
           <View
             {...(Platform.OS === 'web' ? {
-              onMouseEnter: () => setHoveredField({ taskId: item.id, field: 'description' }),
-              onMouseLeave: () => setHoveredField(null),
+              onMouseEnter: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setHoveredTaskId(null); // Clear task container hover
+                setHoveredField({ taskId: item.id, field: 'description' });
+              },
+              onMouseLeave: (e: React.MouseEvent) => {
+                setHoveredField(null);
+                // If mouse is still in task container, restore hover after a short delay
+                setTimeout(() => {
+                  if (!hoveredSubtaskId) {
+                    setHoveredTaskId(item.id);
+                  }
+                }, 10);
+              },
             } : {})}
           >
             <EditableField
@@ -676,8 +715,31 @@ export default function TasksScreen() {
           </View>
 
           {/* Tags */}
-          <View style={styles.tagsRow}>
-            <TagsDisplay tags={item.tags} onEdit={() => openTagModalForTask(item.id, true)} />
+          <View
+            style={styles.tagsContainer}
+            {...(Platform.OS === 'web' ? {
+              onMouseEnter: (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setHoveredTaskId(null); // Clear task container hover
+              },
+              onMouseLeave: (e: React.MouseEvent) => {
+                // If mouse is still in task container, restore hover after a short delay
+                setTimeout(() => {
+                  if (!hoveredSubtaskId) {
+                    setHoveredTaskId(item.id);
+                  }
+                }, 10);
+              },
+            } : {})}
+          >
+            <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
+            <View style={styles.tagsRow}>
+              <TagDisplayRow
+                tags={buildTaskTagsFromTask(item)}
+                onEdit={() => openTagModalForTask(item.id, true)}
+                tagGroupColors={tagGroupColors}
+              />
+            </View>
           </View>
 
           {/* Show time and deadline for single task */}
@@ -759,14 +821,31 @@ export default function TasksScreen() {
         {isExpanded && hasSubtasks && (
           <View style={styles.subtaskList}>
             {item.subtasks.map((sub) => {
-              const { horizontal: subtaskPaddingH, vertical: subtaskPaddingV } = getSubtaskPadding(responsive);
               const subStatusComplete = isStatusComplete(sub.status);
               const isSubtaskTitleHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'title';
               const isSubtaskDescHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'description';
+              const isSubtaskHovered = hoveredSubtaskId === sub.id;
               return (
               <View
                 key={sub.id}
-                style={[styles.subtaskContainer, { paddingHorizontal: subtaskPaddingH, paddingVertical: subtaskPaddingV }]}
+                style={[
+                  styles.subtaskContainer,
+                  isSubtaskHovered && Platform.OS === 'web' && styles.subtaskContainerHovered,
+                ]}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: () => {
+                    // Clear parent task hover when hovering over subtask
+                    setHoveredTaskId(null);
+                    setHoveredSubtaskId(sub.id);
+                  },
+                  onMouseLeave: () => {
+                    setHoveredSubtaskId(null);
+                    // Restore parent task hover when leaving subtask (if still in parent)
+                    setTimeout(() => {
+                      setHoveredTaskId(item.id);
+                    }, 10);
+                  },
+                } : {})}
               >
                 <View style={styles.subtaskRow}>
                   <View style={styles.subtaskContent}>
@@ -780,8 +859,18 @@ export default function TasksScreen() {
                       {/* Subtask title (editable) */}
                       <View
                         {...(Platform.OS === 'web' ? {
-                          onMouseEnter: () => setHoveredSubtaskField({ subtaskId: sub.id, field: 'title' }),
-                          onMouseLeave: () => setHoveredSubtaskField(null),
+                          onMouseEnter: (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            setHoveredSubtaskId(null); // Clear subtask container hover
+                            setHoveredSubtaskField({ subtaskId: sub.id, field: 'title' });
+                          },
+                          onMouseLeave: (e: React.MouseEvent) => {
+                          setHoveredSubtaskField(null);
+                          // If mouse is still in subtask container, restore hover after a short delay
+                          setTimeout(() => {
+                            setHoveredSubtaskId(sub.id);
+                          }, 10);
+                        },
                         } : {})}
                       >
                         <EditableField
@@ -799,8 +888,18 @@ export default function TasksScreen() {
                     {/* Subtask description (editable) */}
                     <View
                       {...(Platform.OS === 'web' ? {
-                        onMouseEnter: () => setHoveredSubtaskField({ subtaskId: sub.id, field: 'description' }),
-                        onMouseLeave: () => setHoveredSubtaskField(null),
+                        onMouseEnter: (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          setHoveredSubtaskId(null); // Clear subtask container hover
+                          setHoveredSubtaskField({ subtaskId: sub.id, field: 'description' });
+                        },
+                        onMouseLeave: (e: React.MouseEvent) => {
+                          setHoveredSubtaskField(null);
+                          // If mouse is still in subtask container, restore hover after a short delay
+                          setTimeout(() => {
+                            setHoveredSubtaskId(sub.id);
+                          }, 10);
+                        },
                       } : {})}
                     >
                       <EditableField
@@ -816,8 +915,29 @@ export default function TasksScreen() {
 
                     {/* Subtask Meta */}
                     <View style={styles.subtaskMetaContainer}>
-                      <View style={[styles.tagsRow, styles.subtaskTagsRow]}>
-                        <TagsDisplay tags={sub.tags} onEdit={() => openTagModalForTask(sub.id, false)} />
+                      <View
+                        style={styles.subtaskTagsContainer}
+                        {...(Platform.OS === 'web' ? {
+                          onMouseEnter: (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            setHoveredSubtaskId(null); // Clear subtask container hover
+                          },
+                          onMouseLeave: (e: React.MouseEvent) => {
+                            // If mouse is still in subtask container, restore hover after a short delay
+                            setTimeout(() => {
+                              setHoveredSubtaskId(sub.id);
+                            }, 10);
+                          },
+                        } : {})}
+                      >
+                        <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
+                        <View style={styles.tagsRow}>
+                          <TagDisplayRow
+                            tags={buildTaskTagsFromTask(sub)}
+                            onEdit={() => openTagModalForTask(sub.id, false)}
+                            tagGroupColors={tagGroupColors}
+                          />
+                        </View>
                       </View>
                       <View style={styles.subtaskTimeDeadlineRow}>
                         <TouchableOpacity
@@ -1045,39 +1165,6 @@ export default function TasksScreen() {
   );
 }
 
-const TagsDisplay = ({ tags, onEdit }: { tags: TaskItem['tags']; onEdit: () => void }) => (
-  <Pressable
-    onPress={onEdit}
-    style={({ pressed }) => [styles.tagsPressable, pressed && { opacity: 0.7 }]}
-  >
-    <View style={styles.tagChipRow}>
-      {tags.place && (
-        <View style={[styles.miniTag, { backgroundColor: '#E0F2F1' }]}>
-          <Text style={[styles.miniTagText, { color: '#00695C' }]}>{tags.place}</Text>
-        </View>
-      )}
-      {tags.priority && (
-        <View style={[styles.miniTag, { backgroundColor: '#FFF3E0' }]}>
-          <Text style={[styles.miniTagText, { color: '#E65100' }]}>{tags.priority}</Text>
-        </View>
-      )}
-      {tags.attention && (
-        <View style={[styles.miniTag, { backgroundColor: '#F3E5F5' }]}>
-          <Text style={[styles.miniTagText, { color: '#7B1FA2' }]}>{tags.attention}</Text>
-        </View>
-      )}
-      {tags.tools.slice(0, 2).map((t) => (
-        <View key={t} style={[styles.miniTag, { backgroundColor: '#E3F2FD' }]}>
-          <Text style={[styles.miniTagText, { color: '#1565C0' }]}>{t}</Text>
-        </View>
-      ))}
-    </View>
-    <View style={styles.editIcon}>
-      <Ionicons name="create-outline" size={14} color="#666" />
-    </View>
-  </Pressable>
-);
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
@@ -1103,6 +1190,16 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
       },
+    }),
+  },
+  cardHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderColor: '#2196f3',
+        boxShadow: '0px 4px 6px 0px rgba(33, 150, 243, 0.15)',
+      },
+      default: {},
     }),
   },
   editableFieldHovered: {
@@ -1178,6 +1275,16 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  subtaskContainerHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderColor: '#2196f3',
+        boxShadow: '0px 4px 6px 0px rgba(33, 150, 243, 0.15)',
+      },
+      default: {},
+    }),
+  },
   subtaskRow: { flexDirection: 'row', alignItems: 'flex-start' },
   subtaskContent: { flex: 1, marginLeft: 0, gap: 8 },
   subtaskHeaderRow: {
@@ -1224,6 +1331,9 @@ const styles = StyleSheet.create({
   },
 
   // Tags & Time Editing
+  tagsContainer: { marginTop: 8, gap: 4 },
+  tagsLabel: { fontSize: 12, fontWeight: '600', color: '#666', marginBottom: 4 },
+  subtaskTagsContainer: { marginTop: 8, gap: 4 },
   tagsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, flexWrap: 'wrap', marginTop: 4 },
   tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
