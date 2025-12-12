@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TAG_GROUPS, DEFAULT_TAG_GROUP_ORDER, TAG_GROUP_COLORS, DEFAULT_CATEGORIES } from '@/constants/task-tags';
@@ -31,6 +31,7 @@ interface ApiTaskResponse {
 
 export default function AddTaskScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ taskId?: string }>();
   const isEditMode = !!params.taskId;
   const [isLoading, setIsLoading] = useState(isEditMode);
@@ -50,6 +51,14 @@ export default function AddTaskScreen() {
 
   // Subtask List
   const [subtasks, setSubtasks] = useState<LocalSubTask[]>([]);
+
+  // Update navigation title based on edit mode
+  useEffect(() => {
+    navigation.setOptions({
+      title: isEditMode ? 'Edit Task' : TASK_SCREEN_STRINGS.addTask.sectionTitle,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode]);
 
   // Load task data for edit mode
   useEffect(() => {
