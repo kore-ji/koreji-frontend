@@ -1,4 +1,4 @@
-import { Modal, View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
@@ -68,7 +68,7 @@ export function TagSelectionModal({
       accessibilityViewIsModal
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay} accessibilityRole="button" accessibilityLabel="Close modal">
+      <View style={styles.modalOverlay} accessibilityLabel="Close modal">
         <View
           style={styles.modalCard}
           accessibilityViewIsModal
@@ -205,6 +205,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+      default: {},
+    }),
   },
   modalCard: {
     backgroundColor: '#fff',

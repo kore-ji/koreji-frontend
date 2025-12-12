@@ -567,7 +567,6 @@ export default function TasksScreen() {
             setStatusPickerVisible(null);
             setStatusPickerTaskId(null);
           }}
-          accessibilityRole="button"
           accessibilityLabel="Close modal"
         >
           <Pressable
@@ -915,6 +914,12 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+      default: {},
+    }),
     justifyContent: 'center',
     alignItems: 'center',
   },

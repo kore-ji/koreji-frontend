@@ -123,6 +123,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    ...Platform.select({
+      web: {
+        pointerEvents: 'auto' as const,
+      },
+      default: {},
+    }),
   },
   datePickerContainerCentered: {
     backgroundColor: '#fff',
