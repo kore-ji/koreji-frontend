@@ -184,6 +184,8 @@ export default function TasksScreen() {
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hoveredField, setHoveredField] = useState<{ taskId: string; field: string } | null>(null);
+  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
 
@@ -584,6 +586,8 @@ export default function TasksScreen() {
   const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
     const isExpanded = expandedIds.has(item.id);
     const hasSubtasks = item.subtasks.length > 0;
+    const isTitleHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'title';
+    const isDescHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'description';
 
     // Progress calculation
     const totalSub = item.subtasks.length;
@@ -626,10 +630,20 @@ export default function TasksScreen() {
             </Pressable>
 
             {/* Title (editable) */}
-            <View style={styles.titleContainer}>
+            <View
+              style={styles.titleContainer}
+              {...(Platform.OS === 'web' ? {
+                onMouseEnter: () => setHoveredField({ taskId: item.id, field: 'title' }),
+                onMouseLeave: () => setHoveredField(null),
+              } : {})}
+            >
               <EditableField
                 value={item.title}
-                textStyle={[styles.taskTitle, { fontSize: layout.taskTitleSize }]}
+                textStyle={[
+                  styles.taskTitle,
+                  { fontSize: layout.taskTitleSize },
+                  isTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                ]}
                 onSave={(val) => updateTaskField(item.id, 'title', val)}
               />
             </View>
@@ -643,12 +657,23 @@ export default function TasksScreen() {
           </View>
 
           {/* Description (editable) */}
-          <EditableField
-            value={item.description}
-            placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
-            textStyle={[styles.taskDesc, { fontSize: layout.taskDescSize }]}
-            onSave={(val) => updateTaskField(item.id, 'description', val)}
-          />
+          <View
+            {...(Platform.OS === 'web' ? {
+              onMouseEnter: () => setHoveredField({ taskId: item.id, field: 'description' }),
+              onMouseLeave: () => setHoveredField(null),
+            } : {})}
+          >
+            <EditableField
+              value={item.description}
+              placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
+              textStyle={[
+                styles.taskDesc,
+                { fontSize: layout.taskDescSize },
+                isDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+              ]}
+              onSave={(val) => updateTaskField(item.id, 'description', val)}
+            />
+          </View>
 
           {/* Tags */}
           <View style={styles.tagsRow}>
@@ -736,8 +761,13 @@ export default function TasksScreen() {
             {item.subtasks.map((sub) => {
               const { horizontal: subtaskPaddingH, vertical: subtaskPaddingV } = getSubtaskPadding(responsive);
               const subStatusComplete = isStatusComplete(sub.status);
+              const isSubtaskTitleHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'title';
+              const isSubtaskDescHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'description';
               return (
-              <View key={sub.id} style={[styles.subtaskContainer, { paddingHorizontal: subtaskPaddingH, paddingVertical: subtaskPaddingV }]}>
+              <View
+                key={sub.id}
+                style={[styles.subtaskContainer, { paddingHorizontal: subtaskPaddingH, paddingVertical: subtaskPaddingV }]}
+              >
                 <View style={styles.subtaskRow}>
                   <View style={styles.subtaskContent}>
                     <View style={styles.subtaskHeaderRow}>
@@ -748,20 +778,41 @@ export default function TasksScreen() {
                       })}
 
                       {/* Subtask title (editable) */}
-                      <EditableField
-                        value={sub.title}
-                        textStyle={[styles.subtaskText, subStatusComplete && styles.completedText]}
-                        onSave={(val) => updateTaskField(sub.id, 'title', val)}
-                      />
+                      <View
+                        {...(Platform.OS === 'web' ? {
+                          onMouseEnter: () => setHoveredSubtaskField({ subtaskId: sub.id, field: 'title' }),
+                          onMouseLeave: () => setHoveredSubtaskField(null),
+                        } : {})}
+                      >
+                        <EditableField
+                          value={sub.title}
+                          textStyle={[
+                            styles.subtaskText,
+                            subStatusComplete && styles.completedText,
+                            isSubtaskTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                          ]}
+                          onSave={(val) => updateTaskField(sub.id, 'title', val)}
+                        />
+                      </View>
                     </View>
 
                     {/* Subtask description (editable) */}
-                    <EditableField
-                      value={sub.description}
-                      placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
-                      textStyle={styles.subtaskDesc}
-                      onSave={(val) => updateTaskField(sub.id, 'description', val)}
-                    />
+                    <View
+                      {...(Platform.OS === 'web' ? {
+                        onMouseEnter: () => setHoveredSubtaskField({ subtaskId: sub.id, field: 'description' }),
+                        onMouseLeave: () => setHoveredSubtaskField(null),
+                      } : {})}
+                    >
+                      <EditableField
+                        value={sub.description}
+                        placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
+                        textStyle={[
+                          styles.subtaskDesc,
+                          isSubtaskDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                        ]}
+                        onSave={(val) => updateTaskField(sub.id, 'description', val)}
+                      />
+                    </View>
 
                     {/* Subtask Meta */}
                     <View style={styles.subtaskMetaContainer}>
@@ -1032,10 +1083,46 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   headerTitle: { fontWeight: 'bold', color: '#333' },
   listContent: { paddingBottom: 80 },
-  card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, overflow: 'hidden', elevation: 2 },
-
-  taskHeader: {},
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease-in-out',
+        cursor: 'pointer',
+      },
+      default: {
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+    }),
+  },
+  editableFieldHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderBottomColor: '#2196f3',
+      },
+      default: {},
+    }),
+  },
+  taskHeader: {
+    gap: 8,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
   categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
   categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
   titleContainer: { flex: 1 },
@@ -1069,13 +1156,51 @@ const styles = StyleSheet.create({
   totalTimeText: { fontSize: 12, fontWeight: '600', color: '#555' },
 
   // Subtasks
-  subtaskList: { backgroundColor: '#FAFAFA', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingVertical: 4 },
-  subtaskContainer: { borderBottomWidth: 1, borderBottomColor: '#eee' },
-  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  subtaskContent: { flex: 1, marginLeft: 0 },
-  subtaskHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  subtaskText: { fontSize: 15, color: '#333', fontWeight: '500', flex: 1 },
-  subtaskDesc: { fontSize: 13, color: '#999', marginTop: 2 },
+  subtaskList: { paddingVertical: 4, gap: 12 },
+  subtaskContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease-in-out',
+      },
+      default: {
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+    }),
+  },
+  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  subtaskContent: { flex: 1, marginLeft: 0, gap: 8 },
+  subtaskHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 4,
+  },
+  subtaskDesc: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
   completedText: { textDecorationLine: 'line-through', color: '#aaa' },
   subtaskMetaRow: { marginTop: 8 },
   subtaskMetaContainer: {
