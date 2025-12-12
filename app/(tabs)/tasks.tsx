@@ -821,7 +821,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtaskText: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '500',
     color: '#333',
