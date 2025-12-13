@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput, Modal, Pressable, Platform
+  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Modal, Pressable, Platform
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,149 +14,18 @@ import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
 import { DatePickerModal } from '@/components/add-task/date-picker-modal';
-import { type TaskTags, TagDisplayRow } from '@/components/ui/tag-display-row';
+import { type TaskTags } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
 import { get, patch, ApiClientError, ApiErrorType } from '@/services/api/client';
-import { mapStatusFromBackend, mapStatusToBackend, type BackendTaskStatus } from '@/utils/mapping/status';
+import { mapStatusToBackend } from '@/utils/mapping/status';
 import { formatDate } from '@/utils/formatting/date';
+import { type TaskItem, type ApiTaskResponse, type TaskItemWithSubtasks } from '@/types/tasks';
+import { flattenTasks } from '@/utils/tasks/flatten-tasks';
+import { buildTaskTagsFromTask, buildTaskFieldsFromSelection } from '@/utils/tasks/task-tags';
+import { TaskItemComponent } from '@/components/tasks/task-item';
 
 const isStatusComplete = (status: TaskStatus) => status === 'Done' || status === 'Archive';
-
-// --- Task Item Type ---
-interface TaskItem {
-  id: string;
-  parentId: string | null;
-  title: string;
-  description: string;
-  category?: string;
-  estimatedTime: number;
-  deadline?: Date | null;
-  isCompleted: boolean;
-  status: TaskStatus;
-  tags: {
-    priority?: string;
-    attention?: string;
-    tools: string[];
-    place?: string;
-  };
-}
-
-interface ApiTaskResponse {
-  id: string;
-  parent_id: string | null;
-  title: string;
-  description?: string | null;
-  category?: string | null;
-  status: BackendTaskStatus;
-  estimated_minutes?: number | null;
-  due_date?: string | null;
-  tags?: unknown[]; // tags not mapped in UI yet
-  subtasks?: ApiTaskResponse[];
-}
-
-const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null): TaskItem[] => {
-  const result: TaskItem[] = [];
-  items.forEach((t) => {
-    const taskId = t.id;
-    const task: TaskItem = {
-      id: taskId,
-      parentId: parentId,
-      title: t.title || '',
-      description: t.description || '',
-      category: t.category || undefined,
-      estimatedTime: t.estimated_minutes ?? 0,
-      deadline: t.due_date ? new Date(t.due_date) : null,
-      isCompleted: t.status === 'completed',
-      status: mapStatusFromBackend(t.status),
-      tags: { tools: [] },
-    };
-    result.push(task);
-    if (t.subtasks?.length) {
-      result.push(...flattenTasks(t.subtasks, taskId));
-    }
-  });
-  return result;
-};
-
-// --- [New Component] Editable text field ---
-// Responsible for handling the switch between displayed text and input field
-interface EditableFieldProps {
-  value: string;
-  isNumeric?: boolean;
-  textStyle?: any;
-  containerStyle?: any;
-  placeholder?: string;
-  isReadOnly?: boolean;
-  onSave: (newValue: string) => void;
-}
-
-const EditableField = ({
-  value,
-  isNumeric,
-  textStyle,
-  containerStyle,
-  placeholder,
-  isReadOnly = false,
-  onSave
-}: EditableFieldProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempValue, setTempValue] = useState(value);
-
-  // When external data changes, synchronize the internal temporary value
-  React.useEffect(() => {
-    setTempValue(value);
-  }, [value]);
-
-  const handleStartEdit = () => {
-    if (isReadOnly) return;
-    setIsEditing(true);
-  };
-
-  const handleSubmit = () => {
-    setIsEditing(false);
-    // Update only if the value has changed
-    if (tempValue !== value) {
-      onSave(tempValue);
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <View style={[containerStyle, styles.inputWrapper]}>
-        <TextInput
-          value={tempValue}
-          onChangeText={setTempValue}
-          onSubmitEditing={handleSubmit} // Trigger save when pressing Enter  
-          onBlur={handleSubmit} // Trigger save when losing focus
-          autoFocus
-          keyboardType={isNumeric ? 'numeric' : 'default'}
-          style={[textStyle, { padding: 0, minWidth: 40 }]} // Keep the same style as the original text
-          returnKeyType="done"
-        />
-      </View>
-    );
-  }
-
-  return (
-    <TouchableOpacity
-      onPress={handleStartEdit}
-      onPressIn={(e) => {
-        // Prevent event from bubbling to parent Pressable
-        e.stopPropagation?.();
-      }}
-      style={containerStyle}
-      activeOpacity={isReadOnly ? 1 : 0.6}
-    >
-      <Text style={[
-        textStyle,
-        isReadOnly && { opacity: 0.6 } // When read-only, slightly fade out
-      ]}>
-        {value || placeholder}
-      </Text>
-    </TouchableOpacity>
-  );
-};
 
 export default function TasksScreen() {
   const router = useRouter();
@@ -182,8 +51,8 @@ export default function TasksScreen() {
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hoveredField, setHoveredField] = useState<{ taskId: string; field: string } | null>(null);
-  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: string } | null>(null);
+  const [hoveredField, setHoveredField] = useState<{ taskId: string; field: 'title' | 'description' } | null>(null);
+  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: 'title' | 'description' } | null>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [hoveredSubtaskId, setHoveredSubtaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -339,27 +208,6 @@ export default function TasksScreen() {
   );
 
   // --- Tag helpers ---
-  const buildTaskTagsFromTask = (task: TaskItem): TaskTags => {
-    const groupTags: { [groupName: string]: string[] } = {};
-    if (task.category) groupTags.Category = [task.category];
-    if (task.tags.priority) groupTags.Priority = [task.tags.priority];
-    if (task.tags.attention) groupTags.Attention = [task.tags.attention];
-    if (task.tags.tools?.length) groupTags.Tools = task.tags.tools;
-    if (task.tags.place) groupTags.Place = [task.tags.place];
-    return { tagGroups: groupTags };
-  };
-
-  const buildTaskFieldsFromSelection = (selection: TaskTags, includeCategory: boolean) => {
-    const groups = selection.tagGroups || {};
-    const nextTags = {
-      priority: groups.Priority?.[0],
-      attention: groups.Attention?.[0],
-      tools: groups.Tools || [],
-      place: groups.Place?.[0],
-    };
-    const categoryValue = includeCategory ? groups.Category?.[0] : undefined;
-    return { categoryValue, nextTags };
-  };
 
   const openTagModalForTask = (taskId: string, isMainTask: boolean) => {
     const task = tasks.find((t) => t.id === taskId);
@@ -566,16 +414,6 @@ export default function TasksScreen() {
     setExpandedIds(newSet);
   };
 
-  const renderStatusBadge = (status: TaskStatus, onPress: () => void) => (
-    <TouchableOpacity onPress={onPress}>
-      <View style={[styles.statusBadge, { backgroundColor: TASK_STATUS_COLORS[status].bg }]}>
-        <Text style={[styles.statusText, { color: TASK_STATUS_COLORS[status].text }]}>
-          {status}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
   const layout = getLayoutSizes(responsive);
   const isEmptyState = !loading && !error && structuredTasks.length === 0;
 
@@ -601,9 +439,8 @@ export default function TasksScreen() {
     clearHover: useClearHoverHandlers(containerHandlersProps),
   };
 
-  const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
+  const renderItem = ({ item }: { item: TaskItemWithSubtasks }) => {
     const isExpanded = expandedIds.has(item.id);
-    const hasSubtasks = item.subtasks.length > 0;
     const isTitleHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'title';
     const isDescHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'description';
 
@@ -618,264 +455,44 @@ export default function TasksScreen() {
       : 0;
     const shouldShowProgress = hasProgressFromSubtasks;
 
-    const handleTaskPress = () => {
-      router.push(`/add_task?taskId=${item.id}`);
-    };
-
     // Only show hover if no subtask is hovered
     const isTaskHovered = hoveredTaskId === item.id && !hoveredSubtaskId;
 
     return (
-      <Pressable
-        onPress={handleTaskPress}
-        style={[
-          styles.card,
-          isTaskHovered && Platform.OS === 'web' && styles.cardHovered,
-        ]}
-        {...createMouseHandlers.container(item.id, false)}
-      >
-        <View style={[styles.taskHeader, { padding: layout.cardHeaderPadding }]}>
-
-          {/* Top part: category and title */}
-          <View style={styles.headerTop}>
-            {/* Status Badge */}
-            {renderStatusBadge(item.status, () => {
-              setStatusPickerTaskId(item.id);
-              setStatusPickerVisible(item.id);
-            })}
-
-            <Pressable
-              onPress={() => openTagModalForTask(item.id, true)}
-              style={({ pressed }) => [
-                styles.categoryBadge,
-                pressed && { opacity: 0.75 },
-              ]}
-            >
-              <Text style={styles.categoryText}>{item.category || TASK_SCREEN_STRINGS.tasksList.defaultCategory}</Text>
-            </Pressable>
-
-            {/* Title (editable) */}
-            <View
-              style={styles.titleContainer}
-              {...createMouseHandlers.editableField(item.id, 'title', false)}
-            >
-              <EditableField
-                value={item.title}
-                textStyle={[
-                  styles.taskTitle,
-                  { fontSize: layout.taskTitleSize },
-                  isTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
-                ]}
-                onSave={(val) => updateTaskField(item.id, 'title', val)}
-              />
-            </View>
-
-            {/* Expand arrow */}
-            {hasSubtasks && (
-              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.expandButton}>
-                <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Description (editable) */}
-          <View
-            {...createMouseHandlers.editableField(item.id, 'description', false)}
-          >
-            <EditableField
-              value={item.description}
-              placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
-              textStyle={[
-                styles.taskDesc,
-                { fontSize: layout.taskDescSize },
-                isDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
-              ]}
-              onSave={(val) => updateTaskField(item.id, 'description', val)}
-            />
-          </View>
-
-          {/* Tags */}
-          <View
-            style={styles.tagsContainer}
-            {...createMouseHandlers.clearHover(item.id, false)}
-          >
-            <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
-            <View style={styles.tagsRow}>
-              <TagDisplayRow
-                tags={buildTaskTagsFromTask(item)}
-                onEdit={() => openTagModalForTask(item.id, true)}
-                tagGroupColors={tagGroupColors}
-              />
-            </View>
-          </View>
-
-          {/* Show time and deadline for single task */}
-          {!hasSubtasks && (
-            <View style={styles.singleTimeDeadlineRow}>
-              <TouchableOpacity
-                style={styles.deadlineDisplay}
-                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...createMouseHandlers.clearHover(item.id, false)}
-              >
-                <Ionicons name="calendar-outline" size={14} color="#666" />
-                <Text style={styles.deadlineText}>
-                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
-                </Text>
-              </TouchableOpacity>
-              <View style={styles.singleTimeRow}>
-                <Text style={styles.clockIcon}>⏱</Text>
-                <EditableField
-                  value={item.estimatedTime.toString()}
-                  isNumeric
-                  textStyle={styles.tagTime}
-                  containerStyle={styles.timeTagContainer}
-                  onSave={(val) => updateTaskField(item.id, 'estimatedTime', parseInt(val) || 0)}
-                />
-                <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
-              </View>
-            </View>
-          )}
-
-
-          {/* When there are subtasks, show: deadline + progress bar + total time (read-only) */}
-          {shouldShowProgress && (
-            <View style={styles.progressRow}>
-              {/* Show the deadline on the left */}
-              <TouchableOpacity
-                style={styles.deadlineDisplay}
-                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...createMouseHandlers.clearHover(item.id, false)}
-              >
-                <Ionicons name="calendar-outline" size={14} color="#666" />
-                <Text style={styles.deadlineText}>
-                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
-                </Text>
-              </TouchableOpacity>
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                </View>
-                <Text style={styles.progressText}>
-                  {Math.round(progressPercent)}{TASK_SCREEN_STRINGS.tasksList.progressUnit}
-                </Text>
-              </View>
-
-              {/* Show the total time (read-only) */}
-              <View style={styles.totalTimeBadge}>
-                <Text style={styles.totalTimeText}>
-                  {TASK_SCREEN_STRINGS.tasksList.totalTimePrefix} {item.displayTime} {TASK_SCREEN_STRINGS.tasksList.totalTimeSuffix}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Expand subtasks */}
-        {isExpanded && hasSubtasks && (
-          <View style={styles.subtaskList}>
-            {item.subtasks.map((sub) => {
-              const subStatusComplete = isStatusComplete(sub.status);
-              const isSubtaskTitleHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'title';
-              const isSubtaskDescHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'description';
-              const isSubtaskHovered = hoveredSubtaskId === sub.id;
-              return (
-              <View
-                key={sub.id}
-                style={[
-                  styles.subtaskContainer,
-                  isSubtaskHovered && Platform.OS === 'web' && styles.subtaskContainerHovered,
-                ]}
-                {...createMouseHandlers.container(sub.id, true)}
-              >
-                <View style={styles.subtaskRow}>
-                  <View style={styles.subtaskContent}>
-                    <View style={styles.subtaskHeaderRow}>
-                      {/* Subtask Status (replaces checkbox) */}
-                      {renderStatusBadge(sub.status, () => {
-                        setStatusPickerTaskId(sub.id);
-                        setStatusPickerVisible(sub.id);
-                      })}
-
-                      {/* Subtask title (editable) */}
-                      <View
-                        style={styles.titleContainer}
-                        {...createMouseHandlers.editableField(sub.id, 'title', true)}
-                      >
-                        <EditableField
-                          value={sub.title}
-                          textStyle={[
-                            styles.subtaskText,
-                            subStatusComplete && styles.completedText,
-                            isSubtaskTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
-                          ]}
-                          onSave={(val) => updateTaskField(sub.id, 'title', val)}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Subtask description (editable) */}
-                    <View
-                      {...createMouseHandlers.editableField(sub.id, 'description', true)}
-                    >
-                      <EditableField
-                        value={sub.description}
-                        placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
-                        textStyle={[
-                          styles.subtaskDesc,
-                          isSubtaskDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
-                        ]}
-                        onSave={(val) => updateTaskField(sub.id, 'description', val)}
-                      />
-                    </View>
-
-                    {/* Subtask Meta */}
-                    <View style={styles.subtaskMetaContainer}>
-                      <View
-                        style={styles.subtaskTagsContainer}
-                        {...createMouseHandlers.clearHover(sub.id, true)}
-                      >
-                        <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
-                        <View style={styles.tagsRow}>
-                          <TagDisplayRow
-                            tags={buildTaskTagsFromTask(sub)}
-                            onEdit={() => openTagModalForTask(sub.id, false)}
-                            tagGroupColors={tagGroupColors}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.subtaskTimeDeadlineRow}>
-                        <TouchableOpacity
-                          style={styles.deadlineDisplay}
-                          onPress={() => setDatePickers((prev) => ({ ...prev, [sub.id]: true }))}
-                          {...createMouseHandlers.clearHover(sub.id, true)}
-                        >
-                          <Ionicons name="calendar-outline" size={14} color="#666" />
-                          <Text style={styles.deadlineText}>
-                            {sub.deadline ? formatDate(sub.deadline) : 'Set deadline'}
-                          </Text>
-                        </TouchableOpacity>
-                        <View style={styles.subtaskTimeRow}>
-                          <Text style={styles.clockIcon}>⏱</Text>
-                          {/* Subtask time (editable) */}
-                          <EditableField
-                            value={sub.estimatedTime.toString()}
-                            isNumeric
-                            textStyle={styles.tagTime}
-                            containerStyle={styles.timeTagContainer}
-                            onSave={(val) => updateTaskField(sub.id, 'estimatedTime', parseInt(val) || 0)}
-                          />
-                          <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
-              );
-            })}
-          </View>
-        )}
-      </Pressable>
+      <TaskItemComponent
+        item={item}
+        isExpanded={isExpanded}
+        isHovered={isTaskHovered}
+        isTitleHovered={isTitleHovered}
+        isDescHovered={isDescHovered}
+        hoveredSubtaskId={hoveredSubtaskId}
+        hoveredSubtaskField={hoveredSubtaskField}
+        mouseHandlers={createMouseHandlers}
+        onStatusPress={() => {
+          setStatusPickerTaskId(item.id);
+          setStatusPickerVisible(item.id);
+        }}
+        onToggleExpand={() => toggleExpand(item.id)}
+        onUpdateField={updateTaskField}
+        onTagEdit={() => openTagModalForTask(item.id, true)}
+        onDeadlinePress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
+        onSubtaskStatusPress={(subtaskId) => {
+          setStatusPickerTaskId(subtaskId);
+          setStatusPickerVisible(subtaskId);
+        }}
+        onSubtaskUpdateField={updateTaskField}
+        onSubtaskTagEdit={(subtaskId) => openTagModalForTask(subtaskId, false)}
+        onSubtaskDeadlinePress={(subtaskId) => setDatePickers((prev) => ({ ...prev, [subtaskId]: true }))}
+        tagGroupColors={tagGroupColors}
+        isStatusComplete={isStatusComplete}
+        progressPercent={progressPercent}
+        shouldShowProgress={shouldShowProgress}
+        layout={{
+          taskTitleSize: layout.taskTitleSize,
+          taskDescSize: layout.taskDescSize,
+        }}
+        styles={styles}
+      />
     );
   };
 
@@ -1117,8 +734,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
-  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
   titleContainer: { flex: 1 },
   expandButton: { padding: 4 },
 
@@ -1228,14 +843,29 @@ const styles = StyleSheet.create({
   },
 
   // Tags & Time Editing
-  tagsContainer: { marginTop: 8, gap: 4 },
-  tagsLabel: { fontSize: 12, fontWeight: '600', color: '#666', marginBottom: 4 },
-  subtaskTagsContainer: { marginTop: 8, gap: 4 },
-  tagsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, flexWrap: 'wrap', marginTop: 4 },
-  tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
-  editIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2f2f2', alignItems: 'center', justifyContent: 'center' },
-  subtaskTagsRow: { marginTop: 8 },
+  tagsContainer: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f9f9f9',
+    marginTop: 8,
+  },
+  tagsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#888',
+    marginBottom: 6,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginTop: 0,
+  },
+  subtaskTagsContainer: {
+    marginTop: 0,
+  },
   timeTagContainer: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
   tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
   tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },
@@ -1262,8 +892,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-  miniTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  miniTagText: { fontSize: 10, fontWeight: '600' },
 
   // Status Badge
   statusBadge: {
