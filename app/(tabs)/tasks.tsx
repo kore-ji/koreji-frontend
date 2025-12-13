@@ -9,6 +9,7 @@ import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
 import { STYLE_CONSTANTS } from '@/constants/ui';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
+import { DatePickerModal } from '@/components/add-task/date-picker-modal';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
@@ -184,6 +185,7 @@ export default function TasksScreen() {
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
 
   // 2. Function to update task data (syncs with backend)
   const updateTaskField = async (id: string, field: keyof TaskItem, value: any) => {
@@ -201,6 +203,7 @@ export default function TasksScreen() {
       estimatedTime: 'estimated_minutes',
       status: 'status',
       category: 'category',
+      deadline: 'due_date',
     };
 
     const backendField = fieldMapping[field];
@@ -216,6 +219,9 @@ export default function TasksScreen() {
       payload.status = mapStatusToBackend(value as TaskStatus);
     } else if (field === 'estimatedTime') {
       payload.estimated_minutes = value;
+    } else if (field === 'deadline') {
+      // Format date for backend (YYYY-MM-DD format)
+      payload.due_date = value ? formatDate(value as Date) : null;
     } else {
       payload[backendField] = value;
     }
@@ -295,6 +301,28 @@ export default function TasksScreen() {
       setLoading(false);
     }
   }, []);
+
+  // Date picker handlers
+  const handleDateChange = (taskId: string, event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      if (event.type === 'set' && selectedDate) {
+        updateTaskField(taskId, 'deadline', selectedDate);
+      }
+      setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+    } else {
+      if (selectedDate) {
+        updateTaskField(taskId, 'deadline', selectedDate);
+      }
+    }
+  };
+
+  const handleDatePickerDone = (taskId: string) => {
+    setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+  };
+
+  const handleDatePickerCancel = (taskId: string) => {
+    setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+  };
 
   // Fetch on mount
   useEffect(() => {
@@ -630,12 +658,23 @@ export default function TasksScreen() {
           {/* Show time and deadline for single task */}
           {!hasSubtasks && (
             <View style={styles.singleTimeDeadlineRow}>
-              {item.deadline && (
-                <View style={styles.deadlineDisplay}>
-                  <Ionicons name="calendar-outline" size={14} color="#666" />
-                  <Text style={styles.deadlineText}>{formatDate(item.deadline)}</Text>
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.deadlineDisplay}
+                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                  },
+                  onMouseLeave: (e: React.MouseEvent) => {
+                    // Mouse leave handler for web platform
+                  },
+                } : {})}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#666" />
+                <Text style={styles.deadlineText}>
+                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
+                </Text>
+              </TouchableOpacity>
               <View style={styles.singleTimeRow}>
                 <Text style={styles.clockIcon}>⏱</Text>
                 <EditableField
@@ -655,12 +694,23 @@ export default function TasksScreen() {
           {shouldShowProgress && (
             <View style={styles.progressRow}>
               {/* Show the deadline on the left */}
-              {item.deadline && (
-                <View style={styles.deadlineDisplay}>
-                  <Ionicons name="calendar-outline" size={14} color="#666" />
-                  <Text style={styles.deadlineText}>{formatDate(item.deadline)}</Text>
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.deadlineDisplay}
+                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                  },
+                  onMouseLeave: (e: React.MouseEvent) => {
+                    // Mouse leave handler for web platform
+                  },
+                } : {})}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#666" />
+                <Text style={styles.deadlineText}>
+                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
+                </Text>
+              </TouchableOpacity>
               <View style={styles.progressContainer}>
                 <View style={styles.progressBarBg}>
                   <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
@@ -719,12 +769,23 @@ export default function TasksScreen() {
                         <TagsDisplay tags={sub.tags} onEdit={() => openTagModalForTask(sub.id, false)} />
                       </View>
                       <View style={styles.subtaskTimeDeadlineRow}>
-                        {sub.deadline && (
-                          <View style={styles.deadlineDisplay}>
-                            <Ionicons name="calendar-outline" size={14} color="#666" />
-                            <Text style={styles.deadlineText}>{formatDate(sub.deadline)}</Text>
-                          </View>
-                        )}
+                        <TouchableOpacity
+                          style={styles.deadlineDisplay}
+                          onPress={() => setDatePickers((prev) => ({ ...prev, [sub.id]: true }))}
+                          {...(Platform.OS === 'web' ? {
+                            onMouseEnter: (e: React.MouseEvent) => {
+                              e.stopPropagation();
+                            },
+                            onMouseLeave: (e: React.MouseEvent) => {
+                              // Mouse leave handler for web platform
+                            },
+                          } : {})}
+                        >
+                          <Ionicons name="calendar-outline" size={14} color="#666" />
+                          <Text style={styles.deadlineText}>
+                            {sub.deadline ? formatDate(sub.deadline) : 'Set deadline'}
+                          </Text>
+                        </TouchableOpacity>
                         <View style={styles.subtaskTimeRow}>
                           <Text style={styles.clockIcon}>⏱</Text>
                           {/* Subtask time (editable) */}
@@ -909,6 +970,26 @@ export default function TasksScreen() {
         onNewTagGroupNameChange={setNewTagGroupName}
         onSave={saveTagsForTask}
       />
+
+      {/* Date Pickers for Tasks and Subtasks */}
+      {Object.entries(datePickers).map(([taskId, isOpen]) => {
+        if (!isOpen) return null;
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return null;
+
+        const taskDeadline: Date | null = task.deadline ?? null;
+        return (
+          <DatePickerModal
+            key={taskId}
+            visible={isOpen}
+            date={taskDeadline}
+            onDateChange={(event, date) => handleDateChange(taskId, event, date)}
+            onDone={() => handleDatePickerDone(taskId)}
+            onCancel={() => handleDatePickerCancel(taskId)}
+            minimumDate={new Date()}
+          />
+        );
+      })}
     </SafeAreaView>
   );
 }
