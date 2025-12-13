@@ -5,6 +5,11 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/use-responsive';
+import {
+  useContainerHandlers,
+  useEditableFieldHandlers,
+  useClearHoverHandlers,
+} from '@/hooks/use-task-hover-handlers';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
@@ -578,6 +583,24 @@ export default function TasksScreen() {
     router.push('/add_task');
   };
 
+  // Reusable mouse hover handlers
+  const containerHandlersProps = {
+    hoveredSubtaskId,
+    setHoveredTaskId,
+    setHoveredSubtaskId,
+  };
+  const editableFieldHandlersProps = {
+    ...containerHandlersProps,
+    setHoveredField,
+    setHoveredSubtaskField,
+  };
+
+  const createMouseHandlers = {
+    container: useContainerHandlers(containerHandlersProps),
+    editableField: useEditableFieldHandlers(editableFieldHandlersProps),
+    clearHover: useClearHoverHandlers(containerHandlersProps),
+  };
+
   const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
     const isExpanded = expandedIds.has(item.id);
     const hasSubtasks = item.subtasks.length > 0;
@@ -609,20 +632,7 @@ export default function TasksScreen() {
           styles.card,
           isTaskHovered && Platform.OS === 'web' && styles.cardHovered,
         ]}
-        {...(Platform.OS === 'web' ? {
-          onMouseEnter: () => {
-            // Only set task hover if no subtask is currently hovered
-            if (!hoveredSubtaskId) {
-              setHoveredTaskId(item.id);
-            }
-          },
-          onMouseLeave: () => {
-            // Only clear if we're not moving to a subtask
-            if (!hoveredSubtaskId) {
-              setHoveredTaskId(null);
-            }
-          },
-        } : {})}
+        {...createMouseHandlers.container(item.id, false)}
       >
         <View style={[styles.taskHeader, { padding: layout.cardHeaderPadding }]}>
 
@@ -647,22 +657,7 @@ export default function TasksScreen() {
             {/* Title (editable) */}
             <View
               style={styles.titleContainer}
-              {...(Platform.OS === 'web' ? {
-                onMouseEnter: (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setHoveredTaskId(null); // Clear task container hover
-                  setHoveredField({ taskId: item.id, field: 'title' });
-                },
-                onMouseLeave: (e: React.MouseEvent) => {
-                  setHoveredField(null);
-                  // If mouse is still in task container, restore hover after a short delay
-                  setTimeout(() => {
-                    if (!hoveredSubtaskId) {
-                      setHoveredTaskId(item.id);
-                    }
-                  }, 10);
-                },
-              } : {})}
+              {...createMouseHandlers.editableField(item.id, 'title', false)}
             >
               <EditableField
                 value={item.title}
@@ -685,22 +680,7 @@ export default function TasksScreen() {
 
           {/* Description (editable) */}
           <View
-            {...(Platform.OS === 'web' ? {
-              onMouseEnter: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                setHoveredTaskId(null); // Clear task container hover
-                setHoveredField({ taskId: item.id, field: 'description' });
-              },
-              onMouseLeave: (e: React.MouseEvent) => {
-                setHoveredField(null);
-                // If mouse is still in task container, restore hover after a short delay
-                setTimeout(() => {
-                  if (!hoveredSubtaskId) {
-                    setHoveredTaskId(item.id);
-                  }
-                }, 10);
-              },
-            } : {})}
+            {...createMouseHandlers.editableField(item.id, 'description', false)}
           >
             <EditableField
               value={item.description}
@@ -717,20 +697,7 @@ export default function TasksScreen() {
           {/* Tags */}
           <View
             style={styles.tagsContainer}
-            {...(Platform.OS === 'web' ? {
-              onMouseEnter: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                setHoveredTaskId(null); // Clear task container hover
-              },
-              onMouseLeave: (e: React.MouseEvent) => {
-                // If mouse is still in task container, restore hover after a short delay
-                setTimeout(() => {
-                  if (!hoveredSubtaskId) {
-                    setHoveredTaskId(item.id);
-                  }
-                }, 10);
-              },
-            } : {})}
+            {...createMouseHandlers.clearHover(item.id, false)}
           >
             <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
             <View style={styles.tagsRow}>
@@ -748,14 +715,7 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={styles.deadlineDisplay}
                 onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                  onMouseLeave: (e: React.MouseEvent) => {
-                    // Mouse leave handler for web platform
-                  },
-                } : {})}
+                {...createMouseHandlers.clearHover(item.id, false)}
               >
                 <Ionicons name="calendar-outline" size={14} color="#666" />
                 <Text style={styles.deadlineText}>
@@ -784,14 +744,7 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={styles.deadlineDisplay}
                 onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                  onMouseLeave: (e: React.MouseEvent) => {
-                    // Mouse leave handler for web platform
-                  },
-                } : {})}
+                {...createMouseHandlers.clearHover(item.id, false)}
               >
                 <Ionicons name="calendar-outline" size={14} color="#666" />
                 <Text style={styles.deadlineText}>
@@ -832,20 +785,7 @@ export default function TasksScreen() {
                   styles.subtaskContainer,
                   isSubtaskHovered && Platform.OS === 'web' && styles.subtaskContainerHovered,
                 ]}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: () => {
-                    // Clear parent task hover when hovering over subtask
-                    setHoveredTaskId(null);
-                    setHoveredSubtaskId(sub.id);
-                  },
-                  onMouseLeave: () => {
-                    setHoveredSubtaskId(null);
-                    // Restore parent task hover when leaving subtask (if still in parent)
-                    setTimeout(() => {
-                      setHoveredTaskId(item.id);
-                    }, 10);
-                  },
-                } : {})}
+                {...createMouseHandlers.container(sub.id, true)}
               >
                 <View style={styles.subtaskRow}>
                   <View style={styles.subtaskContent}>
@@ -858,20 +798,8 @@ export default function TasksScreen() {
 
                       {/* Subtask title (editable) */}
                       <View
-                        {...(Platform.OS === 'web' ? {
-                          onMouseEnter: (e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            setHoveredSubtaskId(null); // Clear subtask container hover
-                            setHoveredSubtaskField({ subtaskId: sub.id, field: 'title' });
-                          },
-                          onMouseLeave: (e: React.MouseEvent) => {
-                          setHoveredSubtaskField(null);
-                          // If mouse is still in subtask container, restore hover after a short delay
-                          setTimeout(() => {
-                            setHoveredSubtaskId(sub.id);
-                          }, 10);
-                        },
-                        } : {})}
+                        style={styles.titleContainer}
+                        {...createMouseHandlers.editableField(sub.id, 'title', true)}
                       >
                         <EditableField
                           value={sub.title}
@@ -887,20 +815,7 @@ export default function TasksScreen() {
 
                     {/* Subtask description (editable) */}
                     <View
-                      {...(Platform.OS === 'web' ? {
-                        onMouseEnter: (e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          setHoveredSubtaskId(null); // Clear subtask container hover
-                          setHoveredSubtaskField({ subtaskId: sub.id, field: 'description' });
-                        },
-                        onMouseLeave: (e: React.MouseEvent) => {
-                          setHoveredSubtaskField(null);
-                          // If mouse is still in subtask container, restore hover after a short delay
-                          setTimeout(() => {
-                            setHoveredSubtaskId(sub.id);
-                          }, 10);
-                        },
-                      } : {})}
+                      {...createMouseHandlers.editableField(sub.id, 'description', true)}
                     >
                       <EditableField
                         value={sub.description}
@@ -917,18 +832,7 @@ export default function TasksScreen() {
                     <View style={styles.subtaskMetaContainer}>
                       <View
                         style={styles.subtaskTagsContainer}
-                        {...(Platform.OS === 'web' ? {
-                          onMouseEnter: (e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            setHoveredSubtaskId(null); // Clear subtask container hover
-                          },
-                          onMouseLeave: (e: React.MouseEvent) => {
-                            // If mouse is still in subtask container, restore hover after a short delay
-                            setTimeout(() => {
-                              setHoveredSubtaskId(sub.id);
-                            }, 10);
-                          },
-                        } : {})}
+                        {...createMouseHandlers.clearHover(sub.id, true)}
                       >
                         <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
                         <View style={styles.tagsRow}>
@@ -943,14 +847,7 @@ export default function TasksScreen() {
                         <TouchableOpacity
                           style={styles.deadlineDisplay}
                           onPress={() => setDatePickers((prev) => ({ ...prev, [sub.id]: true }))}
-                          {...(Platform.OS === 'web' ? {
-                            onMouseEnter: (e: React.MouseEvent) => {
-                              e.stopPropagation();
-                            },
-                            onMouseLeave: (e: React.MouseEvent) => {
-                              // Mouse leave handler for web platform
-                            },
-                          } : {})}
+                          {...createMouseHandlers.clearHover(sub.id, true)}
                         >
                           <Ionicons name="calendar-outline" size={14} color="#666" />
                           <Text style={styles.deadlineText}>
