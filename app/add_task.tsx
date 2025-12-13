@@ -7,13 +7,16 @@ import { TAG_GROUPS, DEFAULT_TAG_GROUP_ORDER, TAG_GROUP_COLORS, DEFAULT_CATEGORI
 import { DEFAULT_TASK_STATUS } from '@/constants/task-status';
 import { type LocalSubTask } from '@/types/add-task';
 import { type TaskStatus } from '@/types/task-status';
-import { formatDate } from '@/utils/date-formatters';
+import { formatDate } from '@/utils/formatting/date';
+import { mapStatusToBackend } from '@/utils/mapping/status';
+import { post, ApiClientError } from '@/services/api/client';
 import { MainTaskCard } from '@/components/add-task/main-task-card';
 import { SubtaskCard } from '@/components/add-task/subtask-card';
 import { SubtaskHeader } from '@/components/add-task/subtask-header';
 import { AddTaskFooter } from '@/components/add-task/add-task-footer';
 import { DatePickerModal } from '@/components/add-task/date-picker-modal';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
+
 
 export default function AddTaskScreen() {
   const router = useRouter();
@@ -338,49 +341,65 @@ export default function AddTaskScreen() {
   };
 
   // Submit Data
-  const handleSubmit = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
     if (!mainTitle.trim()) {
       Alert.alert(TASK_SCREEN_STRINGS.addTask.alerts.errorTitle, TASK_SCREEN_STRINGS.addTask.alerts.errorMessage);
       return;
     }
 
-    const mainId = Date.now().toString();
-    const createdAt = Date.now();
+    setIsSubmitting(true);
 
-    // Extract category from tags (Category tag group, first selected tag)
-    const categoryFromTags = mainTags.tagGroups?.Category?.[0] || null;
+    try {
+      // Extract category from tags (Category tag group, first selected tag)
+      const categoryFromTags = mainTags.tagGroups?.Category?.[0] || null;
 
-    const mainTaskPayload = {
-      id: mainId,
-      parentId: null,
-      title: mainTitle,
-      description: mainDesc,
-      category: categoryFromTags,
-      estimatedTime: parseInt(calculatedTotalTime) || 0,
-      deadline: mainDeadline ? formatDate(mainDeadline) : null,
-      tags: mainTags,
-      isCompleted: false,
-      status: mainStatus,
-      createdAt,
-    };
+      // Create main task payload
+      const mainTaskPayload = {
+        title: mainTitle.trim(),
+        description: mainDesc.trim() || null,
+        category: categoryFromTags || null,
+        due_date: mainDeadline ? formatDate(mainDeadline) : null,
+        status: mapStatusToBackend(mainStatus),
+        estimated_minutes: parseInt(calculatedTotalTime) || null,
+        priority: null, // TODO: map from tags if needed
+      };
 
-    const subTaskPayloads = subtasks.map((sub) => ({
-      id: sub.id,
-      parentId: mainId,
-      title: sub.title || TASK_SCREEN_STRINGS.addTask.defaultUntitledSubtask,
-      description: sub.description,
-      category: null,
-      estimatedTime: parseInt(sub.estimatedTime) || 0,
-      deadline: sub.deadline ? formatDate(sub.deadline) : null,
-      tags: sub.tags,
-      isCompleted: false,
-      status: sub.status,
-      createdAt,
-    }));
+      // Create main task
+      const mainTaskResponse = await post<{ id: string; [key: string]: unknown }>('/tasks/', mainTaskPayload);
+      const mainTaskId = mainTaskResponse.id;
 
-    const fullPayload = [mainTaskPayload, ...subTaskPayloads];
-    console.log('Single table add payload:', JSON.stringify(fullPayload, null, 2));
-    router.back();
+      // Create subtasks if any
+      if (subtasks.length > 0) {
+        const subtaskPromises = subtasks.map(async (sub) => {
+          const subtaskPayload = {
+            task_id: mainTaskId,
+            title: sub.title.trim() || TASK_SCREEN_STRINGS.addTask.defaultUntitledSubtask,
+            description: sub.description.trim() || null,
+            due_date: sub.deadline ? formatDate(sub.deadline) : null,
+            status: mapStatusToBackend(sub.status),
+            estimated_minutes: parseInt(sub.estimatedTime) || null,
+            priority: null, // TODO: map from tags if needed
+          };
+          return post('/tasks/subtasks', subtaskPayload);
+        });
+
+        await Promise.all(subtaskPromises);
+      }
+
+      // Success - navigate back
+      router.back();
+    } catch (error) {
+      console.error('[Create Task] API error:', error);
+      let errorMessage = TASK_SCREEN_STRINGS.addTask.alerts.errorMessage;
+      if (error instanceof ApiClientError) {
+        errorMessage = error.message || errorMessage;
+      }
+      Alert.alert(TASK_SCREEN_STRINGS.addTask.alerts.errorTitle, errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -457,7 +476,11 @@ export default function AddTaskScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <AddTaskFooter onSubmit={handleSubmit} submitButtonText={TASK_SCREEN_STRINGS.addTask.createTaskButton} />
+      <AddTaskFooter
+        onSubmit={handleSubmit}
+        submitButtonText={isSubmitting ? 'Creating...' : TASK_SCREEN_STRINGS.addTask.createTaskButton}
+        disabled={isSubmitting}
+      />
 
       {/* Main Task Date Picker */}
       <DatePickerModal

@@ -61,9 +61,19 @@ export function TagSelectionModal({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      accessibilityViewIsModal
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay} accessibilityRole="button" accessibilityLabel="Close modal">
+        <View
+          style={styles.modalCard}
+          accessibilityViewIsModal
+          accessibilityLabel={selectTagsTitle}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{selectTagsTitle}</Text>
             <TouchableOpacity onPress={onClose}>

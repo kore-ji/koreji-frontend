@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, TextInput, Modal, Pressable, Platform
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/use-responsive';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
@@ -12,7 +12,8 @@ import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
-import { get, ApiClientError, ApiErrorType } from '@/services/api/client';
+import { get, patch, ApiClientError, ApiErrorType } from '@/services/api/client';
+import { mapStatusFromBackend, mapStatusToBackend, type BackendTaskStatus } from '@/utils/mapping/status';
 
 const getSubtaskPadding = (responsive: ReturnType<typeof useResponsive>) => {
   if (responsive.isMobile) return STYLE_CONSTANTS.subtaskPadding.mobile;
@@ -40,8 +41,6 @@ interface TaskItem {
   };
 }
 
-type BackendTaskStatus = 'pending' | 'in_progress' | 'completed' | 'archived';
-
 interface ApiTaskResponse {
   id: string;
   parent_id: string | null;
@@ -53,21 +52,6 @@ interface ApiTaskResponse {
   tags?: unknown[]; // tags not mapped in UI yet
   subtasks?: ApiTaskResponse[];
 }
-
-const mapStatus = (status: BackendTaskStatus): TaskStatus => {
-  switch (status) {
-    case 'pending':
-      return 'Not started';
-    case 'in_progress':
-      return 'In progress';
-    case 'completed':
-      return 'Done';
-    case 'archived':
-      return 'Archive';
-    default:
-      return 'Not started';
-  }
-};
 
 const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null): TaskItem[] => {
   const result: TaskItem[] = [];
@@ -81,7 +65,7 @@ const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null):
       category: t.category || undefined,
       estimatedTime: t.estimated_minutes ?? 0,
       isCompleted: t.status === 'completed',
-      status: mapStatus(t.status),
+      status: mapStatusFromBackend(t.status),
       tags: { tools: [] },
     };
     result.push(task);
@@ -193,75 +177,128 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Function to update task data (simulate DB Update)
-  const updateTaskField = (id: string, field: keyof TaskItem, value: any) => {
-    setTasks(prevTasks => {
-      const targetTask = prevTasks.find(t => t.id === id);
-      if (!targetTask) return prevTasks;
+  // 2. Function to update task data (syncs with backend)
+  const updateTaskField = async (id: string, field: keyof TaskItem, value: any) => {
+    const targetTask = tasks.find(t => t.id === id);
+    if (!targetTask) return;
 
-      const parentId = targetTask.parentId;
-      const parentTask = parentId ? prevTasks.find(t => t.id === parentId) : null;
+    const isSubtask = targetTask.parentId !== null;
+    const parentId = targetTask.parentId;
+    const parentTask = parentId ? tasks.find(t => t.id === parentId) : null;
 
-      // Update the target task first
-      let nextTasks = prevTasks.map(t => (t.id === id ? { ...t, [field]: value } : t));
-
-      const shouldBumpParent =
-        field === 'status' &&
-        value === 'In progress' &&
-        parentId &&
-        parentTask?.status === 'Not started';
-
-      if (shouldBumpParent) {
-        nextTasks = nextTasks.map(t => (t.id === parentId ? { ...t, status: 'In progress' } : t));
-      }
-
-      const shouldCompleteChildren =
-        field === 'status' &&
-        (value === 'Done' || value === 'Archive');
-
-      if (shouldCompleteChildren) {
-        nextTasks = nextTasks.map(t => {
-          const isChild = t.parentId === id;
-          const targetStatus = value;
-          const shouldUpdateChild = targetStatus === 'Archive'
-            ? t.status !== 'Archive' // archive all non-archived children (including Done)
-            : t.status === 'Not started' || t.status === 'In progress'; // only bump incomplete to Done
-          return isChild && shouldUpdateChild ? { ...t, status: targetStatus } : t;
-        });
-      }
-
-      return nextTasks;
-    });
-    console.log(`[DB Update] Task ${id}: ${field} = ${value}`);
-  };
-
-  // Fetch tasks from backend
-  useEffect(() => {
-    const fetchTasks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await get<ApiTaskResponse[]>('/tasks');
-        const flattened = Array.isArray(data) ? flattenTasks(data) : [];
-        setTasks(flattened);
-      } catch (err) {
-        if (err instanceof ApiClientError) {
-          if (err.type === ApiErrorType.CONFIG) {
-            setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
-          } else {
-            setError(err.message);
-          }
-        } else {
-          setError('Unable to load tasks.');
-        }
-        setTasks([]);
-      } finally {
-        setLoading(false);
-      }
+    // Map frontend field names to backend field names
+    const fieldMapping: Record<string, string> = {
+      title: 'title',
+      description: 'description',
+      estimatedTime: 'estimated_minutes',
+      status: 'status',
+      category: 'category',
     };
 
-    fetchTasks();
+    const backendField = fieldMapping[field];
+    if (!backendField) {
+      console.warn(`[Update Task] Unknown field: ${field}`);
+      return;
+    }
+
+    // Prepare payload
+    const payload: Record<string, unknown> = {};
+    
+    if (field === 'status') {
+      payload.status = mapStatusToBackend(value as TaskStatus);
+    } else if (field === 'estimatedTime') {
+      payload.estimated_minutes = value;
+    } else {
+      payload[backendField] = value;
+    }
+
+    try {
+      // Determine endpoint based on whether it's a subtask
+      const endpoint = isSubtask 
+        ? `/tasks/subtasks/${id}`
+        : `/tasks/${id}`;
+      
+      await patch(endpoint, payload);
+
+      // Update local state optimistically
+      setTasks(prevTasks => {
+        let nextTasks = prevTasks.map(t => (t.id === id ? { ...t, [field]: value } : t));
+
+        const shouldBumpParent =
+          field === 'status' &&
+          value === 'In progress' &&
+          parentId &&
+          parentTask?.status === 'Not started';
+
+        if (shouldBumpParent) {
+          nextTasks = nextTasks.map(t => (t.id === parentId ? { ...t, status: 'In progress' } : t));
+        }
+
+        const shouldCompleteChildren =
+          field === 'status' &&
+          (value === 'Done' || value === 'Archive');
+
+        if (shouldCompleteChildren) {
+          nextTasks = nextTasks.map(t => {
+            const isChild = t.parentId === id;
+            const targetStatus = value;
+            const shouldUpdateChild = targetStatus === 'Archive'
+              ? t.status !== 'Archive' // archive all non-archived children (including Done)
+              : t.status === 'Not started' || t.status === 'In progress'; // only bump incomplete to Done
+            return isChild && shouldUpdateChild ? { ...t, status: targetStatus } : t;
+          });
+        }
+
+        return nextTasks;
+      });
+
+      console.log(`[Backend Update] Task ${id}: ${field} = ${value}`);
+    } catch (error) {
+      console.error(`[Backend Update Failed] Task ${id}: ${field} = ${value}`, error);
+      // Optionally show error to user or revert optimistic update
+      if (error instanceof ApiClientError) {
+        // Could show an alert here
+        console.error('Update failed:', error.message);
+      }
+    }
+  };
+
+  // Fetch tasks from backend (only top-level tasks, not subtasks)
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Only fetch top-level tasks (is_subtask=false)
+      const data = await get<ApiTaskResponse[]>('/tasks?is_subtask=false');
+      const flattened = Array.isArray(data) ? flattenTasks(data) : [];
+      setTasks(flattened);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        if (err.type === ApiErrorType.CONFIG) {
+          setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Unable to load tasks.');
+      }
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Refetch when screen comes into focus (e.g., after creating a task)
+  useFocusEffect(
+    useCallback(() => {
+      fetchTasks();
+    }, [fetchTasks])
+  );
 
   // --- Tag helpers ---
   const buildTaskTagsFromTask = (task: TaskItem): TaskTags => {
@@ -410,7 +447,7 @@ export default function TasksScreen() {
     setNewTagGroupName('');
   };
 
-  const saveTagsForTask = () => {
+  const saveTagsForTask = async () => {
     if (!editingTaskId) {
       setEditingTagTarget(null);
       return;
@@ -429,18 +466,14 @@ export default function TasksScreen() {
     const currentTask = tasks.find((t) => t.id === editingTaskId);
     if (currentTask) {
       console.log('[Tag Update] Task:', editingTaskId, 'New tags:', selection.tagGroups);
-      if (includeCategory) {
-        console.log(
-          '[Category Update] Task:',
-          editingTaskId,
-          'From:',
-          currentTask.category || '(none)',
-          'To:',
-          categoryValue || currentTask.category || '(none)'
-        );
+      
+      // Update category in backend if it changed
+      if (includeCategory && categoryValue !== currentTask.category) {
+        await updateTaskField(editingTaskId, 'category', categoryValue || null);
       }
     }
 
+    // Update local state
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== editingTaskId) return t;
@@ -739,6 +772,7 @@ export default function TasksScreen() {
         visible={statusPickerVisible !== null}
         transparent
         animationType="fade"
+        accessibilityViewIsModal
         onRequestClose={() => {
           setStatusPickerVisible(null);
           setStatusPickerTaskId(null);
@@ -750,8 +784,15 @@ export default function TasksScreen() {
             setStatusPickerVisible(null);
             setStatusPickerTaskId(null);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Close modal"
         >
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={styles.modalContent}
+            accessibilityViewIsModal
+            accessibilityLabel="Select task status"
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Status</Text>
               <TouchableOpacity

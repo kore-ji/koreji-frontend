@@ -3,13 +3,20 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 interface AddTaskFooterProps {
   onSubmit: () => void;
   submitButtonText: string;
+  disabled?: boolean;
 }
 
-export function AddTaskFooter({ onSubmit, submitButtonText }: AddTaskFooterProps) {
+export function AddTaskFooter({ onSubmit, submitButtonText, disabled = false }: AddTaskFooterProps) {
   return (
     <View style={styles.footer}>
-      <TouchableOpacity style={styles.submitBtn} onPress={onSubmit}>
-        <Text style={styles.submitBtnText}>{submitButtonText}</Text>
+      <TouchableOpacity
+        style={[styles.submitBtn, disabled && styles.submitBtnDisabled]}
+        onPress={onSubmit}
+        disabled={disabled}
+      >
+        <Text style={[styles.submitBtnText, disabled && styles.submitBtnTextDisabled]}>
+          {submitButtonText}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -32,6 +39,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  submitBtnTextDisabled: {
+    color: '#999',
   },
 });
 

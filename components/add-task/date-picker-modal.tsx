@@ -1,6 +1,6 @@
 import { Modal, View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { formatDate } from '@/utils/date-formatters';
+import { formatDate } from '@/utils/formatting/date';
 
 interface DatePickerModalProps {
   visible: boolean;

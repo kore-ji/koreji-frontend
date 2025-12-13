@@ -1,6 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { formatDate } from '@/utils/date-formatters';
+import { formatDate } from '@/utils/formatting/date';
 
 interface TimeDeadlineRowProps {
   time: string;

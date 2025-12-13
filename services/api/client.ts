@@ -469,6 +469,35 @@ export async function put<TResponse = unknown, TBody extends JsonSerializable = 
 }
 
 /**
+ * Makes a PATCH request to the API
+ *
+ * @param endpoint - API endpoint path (e.g., '/api/users/123')
+ * @param body - Request body (will be JSON stringified)
+ * @param options - Optional fetch options (headers, timeout via signal, etc.)
+ * @returns Promise resolving to the typed response
+ * @throws ApiClientError if the request fails
+ *
+ * @example
+ * ```ts
+ * // Basic request
+ * const updatedUser = await patch<User, UpdateUserRequest>('/api/users/123', {
+ *   name: 'Jane Doe'
+ * });
+ *
+ * // Request with timeout
+ * const { signal } = createTimeoutSignal(10000);
+ * const updatedUser = await patch<User, UpdateUserRequest>('/api/users/123', data, { signal });
+ * ```
+ */
+export async function patch<TResponse = unknown, TBody extends JsonSerializable = JsonSerializable>(
+  endpoint: string,
+  body: TBody,
+  options?: RequestInit
+): Promise<TResponse> {
+  return request<TResponse>(endpoint, 'PATCH', body, options);
+}
+
+/**
  * Makes a DELETE request to the API
  *
  * @param endpoint - API endpoint path (e.g., '/api/users/123')

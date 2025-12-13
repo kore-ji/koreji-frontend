@@ -60,9 +60,10 @@ test.describe('Home screen timer', () => {
     await expect(placeDropdown).toBeVisible();
     await placeDropdown.click();
     
-    // Wait for modal to appear
-    const modalTitle = page.getByText('Select Place');
+    // Wait for modal to appear using testID (more reliable than text matching)
+    const modalTitle = page.getByTestId('filter-modal-title');
     await expect(modalTitle).toBeVisible();
+    await expect(modalTitle).toHaveText('Select Place');
     
     // Select "Other" option
     const otherOption = page.getByText('Other');
@@ -104,8 +105,8 @@ test.describe('Home screen timer', () => {
     // Close modal by clicking Done
     await doneButton.click();
     
-    // Verify modal is closed
-    await expect(modalTitle).not.toBeVisible();
+    // Verify modal is closed - wait for it to disappear
+    await expect(modalTitle).not.toBeVisible({ timeout: 3000 });
     
     // Verify the custom value is displayed in the dropdown
     await expect(placeDropdown).toContainText(textAtLimit);
