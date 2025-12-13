@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { get } from '@/services/api/client';
-import { type ApiTaskResponse } from '@/types/add-task';
-import { type LocalSubTask } from '@/types/add-task';
+import { type ApiTaskResponse, type LocalSubTask } from '@/types/add-task';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { mapStatusFromBackend } from '@/utils/mapping/status';
 
