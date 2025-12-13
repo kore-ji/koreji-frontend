@@ -23,17 +23,25 @@ test.describe('Home screen timer', () => {
     await expect(minutesValue).toHaveText('20');
 
     await incrementHoursButton.click();
-    await expect(hoursValue).toHaveText('01');
+    await expect.poll(async () => {
+      return await hoursValue.textContent();
+    }, { timeout: 5000 }).toBe('01');
 
     await incrementMinutesButton.click();
     await incrementMinutesButton.click();
-    await expect(minutesValue).toHaveText('22');
+    await expect.poll(async () => {
+      return await minutesValue.textContent();
+    }, { timeout: 5000 }).toBe('22');
 
     await decrementHoursButton.click();
-    await expect(hoursValue).toHaveText('00');
+    await expect.poll(async () => {
+      return await hoursValue.textContent();
+    }, { timeout: 5000 }).toBe('00');
 
     await decrementMinutesButton.click();
-    await expect(minutesValue).toHaveText('21');
+    await expect.poll(async () => {
+      return await minutesValue.textContent();
+    }, { timeout: 5000 }).toBe('21');
 
     await expect(recommendButton).toContainText(actions.recommendButton);
 
