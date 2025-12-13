@@ -29,14 +29,18 @@ export function TagDisplayRow({ tags, onEdit, tagGroupColors }: TagDisplayRowPro
                     (selectedTags || []).map((tag: string) => {
                         const groupColors = colors[groupName] || { bg: '#E8F5E9', text: '#FFFFFF' };
                         return (
-                            <View key={`${groupName}-${tag}`} style={[styles.miniTag, { backgroundColor: groupColors.bg }]}>
+                            <TouchableOpacity 
+                                key={`${groupName}-${tag}`} 
+                                onPress={onEdit}
+                                style={[styles.miniTag, { backgroundColor: groupColors.bg }]}
+                            >
                                 {groupName === 'Place' && (
                                     <Ionicons name="location" size={10} color="#FFFFFF" />
                                 )}
                                 <Text style={[styles.miniTagText, { color: '#FFFFFF' }]}>
                                     {tag}
                                 </Text>
-                            </View>
+                            </TouchableOpacity>
                         );
                     })
                 )}

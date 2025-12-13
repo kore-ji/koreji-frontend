@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Modal, Pressable, Platform
+  StyleSheet, View, Text, FlatList, TouchableOpacity, Modal, Pressable, Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/use-responsive';

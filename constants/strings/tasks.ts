@@ -36,6 +36,9 @@ const TASK_SCREEN_STRINGS = {
     
     // Buttons
     createTaskButton: 'Create Task',
+    updateTaskButton: 'Update Task',
+    updatingButton: 'Updating...',
+    creatingButton: 'Creating...',
     addSubtaskButton: '+ Add Subtask',
     aiGenerateButton: 'AI Generate',
     confirmButton: 'Confirm',

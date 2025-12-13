@@ -587,10 +587,10 @@ export default function AddTaskScreen() {
         submitButtonText={
           isSubmitting
             ? isEditMode
-              ? 'Updating...'
-              : 'Creating...'
+              ? TASK_SCREEN_STRINGS.addTask.updatingButton
+              : TASK_SCREEN_STRINGS.addTask.creatingButton
             : isEditMode
-            ? 'Update Task'
+            ? TASK_SCREEN_STRINGS.addTask.updateTaskButton
             : TASK_SCREEN_STRINGS.addTask.createTaskButton
         }
         disabled={isSubmitting || isLoading}
