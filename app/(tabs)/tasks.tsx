@@ -9,11 +9,13 @@ import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
 import { STYLE_CONSTANTS } from '@/constants/ui';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
+import { DatePickerModal } from '@/components/add-task/date-picker-modal';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
 import { get, patch, ApiClientError, ApiErrorType } from '@/services/api/client';
 import { mapStatusFromBackend, mapStatusToBackend, type BackendTaskStatus } from '@/utils/mapping/status';
+import { formatDate } from '@/utils/formatting/date';
 
 const getSubtaskPadding = (responsive: ReturnType<typeof useResponsive>) => {
   if (responsive.isMobile) return STYLE_CONSTANTS.subtaskPadding.mobile;
@@ -31,6 +33,7 @@ interface TaskItem {
   description: string;
   category?: string;
   estimatedTime: number;
+  deadline?: Date | null;
   isCompleted: boolean;
   status: TaskStatus;
   tags: {
@@ -49,6 +52,7 @@ interface ApiTaskResponse {
   category?: string | null;
   status: BackendTaskStatus;
   estimated_minutes?: number | null;
+  due_date?: string | null;
   tags?: unknown[]; // tags not mapped in UI yet
   subtasks?: ApiTaskResponse[];
 }
@@ -64,6 +68,7 @@ const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null):
       description: t.description || '',
       category: t.category || undefined,
       estimatedTime: t.estimated_minutes ?? 0,
+      deadline: t.due_date ? new Date(t.due_date) : null,
       isCompleted: t.status === 'completed',
       status: mapStatusFromBackend(t.status),
       tags: { tools: [] },
@@ -180,6 +185,7 @@ export default function TasksScreen() {
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
 
   // 2. Function to update task data (syncs with backend)
   const updateTaskField = async (id: string, field: keyof TaskItem, value: any) => {
@@ -197,6 +203,7 @@ export default function TasksScreen() {
       estimatedTime: 'estimated_minutes',
       status: 'status',
       category: 'category',
+      deadline: 'due_date',
     };
 
     const backendField = fieldMapping[field];
@@ -212,6 +219,9 @@ export default function TasksScreen() {
       payload.status = mapStatusToBackend(value as TaskStatus);
     } else if (field === 'estimatedTime') {
       payload.estimated_minutes = value;
+    } else if (field === 'deadline') {
+      // Format date for backend (YYYY-MM-DD format)
+      payload.due_date = value ? formatDate(value as Date) : null;
     } else {
       payload[backendField] = value;
     }
@@ -291,6 +301,28 @@ export default function TasksScreen() {
       setLoading(false);
     }
   }, []);
+
+  // Date picker handlers
+  const handleDateChange = (taskId: string, event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      if (event.type === 'set' && selectedDate) {
+        updateTaskField(taskId, 'deadline', selectedDate);
+      }
+      setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+    } else {
+      if (selectedDate) {
+        updateTaskField(taskId, 'deadline', selectedDate);
+      }
+    }
+  };
+
+  const handleDatePickerDone = (taskId: string) => {
+    setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+  };
+
+  const handleDatePickerCancel = (taskId: string) => {
+    setDatePickers((prev) => ({ ...prev, [taskId]: false }));
+  };
 
   // Fetch on mount
   useEffect(() => {
@@ -623,25 +655,62 @@ export default function TasksScreen() {
             <TagsDisplay tags={item.tags} onEdit={() => openTagModalForTask(item.id, true)} />
           </View>
 
-          {/* Show time for single task (after progress bar, same position as when there are subtasks) */}
+          {/* Show time and deadline for single task */}
           {!hasSubtasks && (
-            <View style={styles.singleTimeRow}>
-              <Text style={styles.clockIcon}>⏱</Text>
-              <EditableField
-                value={item.estimatedTime.toString()}
-                isNumeric
-                textStyle={styles.tagTime}
-                containerStyle={styles.timeTagContainer}
-                onSave={(val) => updateTaskField(item.id, 'estimatedTime', parseInt(val) || 0)}
-              />
-              <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+            <View style={styles.singleTimeDeadlineRow}>
+              <TouchableOpacity
+                style={styles.deadlineDisplay}
+                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                  },
+                  onMouseLeave: (e: React.MouseEvent) => {
+                    // Mouse leave handler for web platform
+                  },
+                } : {})}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#666" />
+                <Text style={styles.deadlineText}>
+                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.singleTimeRow}>
+                <Text style={styles.clockIcon}>⏱</Text>
+                <EditableField
+                  value={item.estimatedTime.toString()}
+                  isNumeric
+                  textStyle={styles.tagTime}
+                  containerStyle={styles.timeTagContainer}
+                  onSave={(val) => updateTaskField(item.id, 'estimatedTime', parseInt(val) || 0)}
+                />
+                <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+              </View>
             </View>
           )}
 
 
-          {/* When there are subtasks, show: progress bar + total time (read-only) */}
+          {/* When there are subtasks, show: deadline + progress bar + total time (read-only) */}
           {shouldShowProgress && (
             <View style={styles.progressRow}>
+              {/* Show the deadline on the left */}
+              <TouchableOpacity
+                style={styles.deadlineDisplay}
+                onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
+                {...(Platform.OS === 'web' ? {
+                  onMouseEnter: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                  },
+                  onMouseLeave: (e: React.MouseEvent) => {
+                    // Mouse leave handler for web platform
+                  },
+                } : {})}
+              >
+                <Ionicons name="calendar-outline" size={14} color="#666" />
+                <Text style={styles.deadlineText}>
+                  {item.deadline ? formatDate(item.deadline) : 'Set deadline'}
+                </Text>
+              </TouchableOpacity>
               <View style={styles.progressContainer}>
                 <View style={styles.progressBarBg}>
                   <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
@@ -699,17 +768,36 @@ export default function TasksScreen() {
                       <View style={[styles.tagsRow, styles.subtaskTagsRow]}>
                         <TagsDisplay tags={sub.tags} onEdit={() => openTagModalForTask(sub.id, false)} />
                       </View>
-                      <View style={[styles.subtaskTimeRow]}>
-                        <Text style={styles.clockIcon}>⏱</Text>
-                        {/* Subtask time (editable) */}
-                        <EditableField
-                          value={sub.estimatedTime.toString()}
-                          isNumeric
-                          textStyle={styles.tagTime}
-                          containerStyle={styles.timeTagContainer}
-                          onSave={(val) => updateTaskField(sub.id, 'estimatedTime', parseInt(val) || 0)}
-                        />
-                        <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+                      <View style={styles.subtaskTimeDeadlineRow}>
+                        <TouchableOpacity
+                          style={styles.deadlineDisplay}
+                          onPress={() => setDatePickers((prev) => ({ ...prev, [sub.id]: true }))}
+                          {...(Platform.OS === 'web' ? {
+                            onMouseEnter: (e: React.MouseEvent) => {
+                              e.stopPropagation();
+                            },
+                            onMouseLeave: (e: React.MouseEvent) => {
+                              // Mouse leave handler for web platform
+                            },
+                          } : {})}
+                        >
+                          <Ionicons name="calendar-outline" size={14} color="#666" />
+                          <Text style={styles.deadlineText}>
+                            {sub.deadline ? formatDate(sub.deadline) : 'Set deadline'}
+                          </Text>
+                        </TouchableOpacity>
+                        <View style={styles.subtaskTimeRow}>
+                          <Text style={styles.clockIcon}>⏱</Text>
+                          {/* Subtask time (editable) */}
+                          <EditableField
+                            value={sub.estimatedTime.toString()}
+                            isNumeric
+                            textStyle={styles.tagTime}
+                            containerStyle={styles.timeTagContainer}
+                            onSave={(val) => updateTaskField(sub.id, 'estimatedTime', parseInt(val) || 0)}
+                          />
+                          <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -882,6 +970,26 @@ export default function TasksScreen() {
         onNewTagGroupNameChange={setNewTagGroupName}
         onSave={saveTagsForTask}
       />
+
+      {/* Date Pickers for Tasks and Subtasks */}
+      {Object.entries(datePickers).map(([taskId, isOpen]) => {
+        if (!isOpen) return null;
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return null;
+
+        const taskDeadline: Date | null = task.deadline ?? null;
+        return (
+          <DatePickerModal
+            key={taskId}
+            visible={isOpen}
+            date={taskDeadline}
+            onDateChange={(event, date) => handleDateChange(taskId, event, date)}
+            onDone={() => handleDatePickerDone(taskId)}
+            onCancel={() => handleDatePickerCancel(taskId)}
+            minimumDate={new Date()}
+          />
+        );
+      })}
     </SafeAreaView>
   );
 }
@@ -939,8 +1047,20 @@ const styles = StyleSheet.create({
   taskDesc: { color: '#666', marginBottom: 10, minHeight: 20 },
 
   // Progress & Time
-  progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  progressContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 12 },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 12,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginRight: 12,
+  },
   progressBarBg: { flex: 1, height: 6, backgroundColor: '#eee', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 3 },
   progressText: { fontSize: 12, color: '#888', width: 36, textAlign: 'right' },
@@ -958,8 +1078,25 @@ const styles = StyleSheet.create({
   subtaskDesc: { fontSize: 13, color: '#999', marginTop: 2 },
   completedText: { textDecorationLine: 'line-through', color: '#aaa' },
   subtaskMetaRow: { marginTop: 8 },
-  subtaskMetaContainer: { marginTop: 6, gap: 6 },
-  subtaskTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  subtaskMetaContainer: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f9f9f9',
+    gap: 6,
+  },
+  subtaskTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  subtaskTimeDeadlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 12,
+  },
 
   // Tags & Time Editing
   tagsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, flexWrap: 'wrap', marginTop: 4 },
@@ -971,7 +1108,28 @@ const styles = StyleSheet.create({
   tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
   tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },
   clockIcon: { fontSize: 12 },
-  singleTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  singleTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  singleTimeDeadlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 12,
+  },
+  deadlineDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deadlineText: {
+    fontSize: 13,
+    color: '#666',
+  },
   miniTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   miniTagText: { fontSize: 10, fontWeight: '600' },
 

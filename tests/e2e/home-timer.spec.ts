@@ -22,18 +22,36 @@ test.describe('Home screen timer', () => {
     await expect(hoursValue).toHaveText('00');
     await expect(minutesValue).toHaveText('20');
 
+    // Wait for button to be actionable, then click
+    await expect(incrementHoursButton).toBeEnabled();
     await incrementHoursButton.click();
-    await expect(hoursValue).toHaveText('01');
+    // Wait for state update with polling - WebKit may need more time
+    await expect.poll(async () => {
+      const text = await hoursValue.textContent();
+      return text;
+    }, { timeout: 10000 }).toBe('01');
 
+    await expect(incrementMinutesButton).toBeEnabled();
     await incrementMinutesButton.click();
     await incrementMinutesButton.click();
-    await expect(minutesValue).toHaveText('22');
+    await expect.poll(async () => {
+      const text = await minutesValue.textContent();
+      return text;
+    }, { timeout: 10000 }).toBe('22');
 
+    await expect(decrementHoursButton).toBeEnabled();
     await decrementHoursButton.click();
-    await expect(hoursValue).toHaveText('00');
+    await expect.poll(async () => {
+      const text = await hoursValue.textContent();
+      return text;
+    }, { timeout: 10000 }).toBe('00');
 
+    await expect(decrementMinutesButton).toBeEnabled();
     await decrementMinutesButton.click();
-    await expect(minutesValue).toHaveText('21');
+    await expect.poll(async () => {
+      const text = await minutesValue.textContent();
+      return text;
+    }, { timeout: 10000 }).toBe('21');
 
     await expect(recommendButton).toContainText(actions.recommendButton);
 
@@ -60,17 +78,16 @@ test.describe('Home screen timer', () => {
     await expect(placeDropdown).toBeVisible();
     await placeDropdown.click();
     
-    // Wait for modal to appear - try multiple strategies for reliability across browsers
-    // Wait for the "Other" option text first as it confirms modal is open, then verify title
-    const otherOption = page.getByText('Other');
-    await expect(otherOption).toBeVisible({ timeout: 10000 });
-    
-    // Now verify the modal title exists and has correct text
+    // Wait for modal to appear - first wait for modal title to confirm modal is open
     const modalTitle = page.getByTestId('filter-modal-title');
-    await expect(modalTitle).toBeVisible();
+    await expect(modalTitle).toBeVisible({ timeout: 10000 });
     await expect(modalTitle).toHaveText('Select Place');
     
-    // Select "Other" option (already located above)
+    // Now wait for the "Other" option to be visible within the modal
+    const otherOption = page.getByText('Other');
+    await expect(otherOption).toBeVisible({ timeout: 5000 });
+    
+    // Select "Other" option
     await otherOption.click();
     
     // Verify input field appears
