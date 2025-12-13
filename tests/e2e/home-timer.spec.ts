@@ -76,12 +76,34 @@ test.describe('Home screen timer', () => {
     // Find and click the Place filter dropdown
     const placeDropdown = page.getByTestId('filter-dropdown-place');
     await expect(placeDropdown).toBeVisible();
+    
+    // Click and wait for the click to complete
     await placeDropdown.click();
     
-    // Wait for modal to appear - first wait for modal title to confirm modal is open
+    // Small delay to allow React state to update and modal to start rendering
+    await page.waitForTimeout(100);
+    
+    // Wait for modal to appear - use polling to wait for modal title
+    // The modal might take a moment to render after state update
     const modalTitle = page.getByTestId('filter-modal-title');
-    await expect(modalTitle).toBeVisible({ timeout: 10000 });
-    await expect(modalTitle).toHaveText('Select Place');
+    
+    // Use polling to wait for the modal to appear, which is more reliable
+    // than just waiting for visibility. Check if element exists in DOM first.
+    await expect.poll(
+      async () => {
+        try {
+          const count = await modalTitle.count();
+          if (count === 0) return false;
+          return await modalTitle.isVisible();
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 15000, intervals: [100, 200, 500] }
+    ).toBe(true);
+    
+    // Verify the text content - this also acts as an additional wait
+    await expect(modalTitle).toHaveText('Select Place', { timeout: 5000 });
     
     // Now wait for the "Other" option to be visible within the modal
     const otherOption = page.getByText('Other');

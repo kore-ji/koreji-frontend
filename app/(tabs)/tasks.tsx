@@ -5,23 +5,21 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/use-responsive';
+import {
+  useContainerHandlers,
+  useEditableFieldHandlers,
+  useClearHoverHandlers,
+} from '@/hooks/use-task-hover-handlers';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { TASK_STATUSES, TASK_STATUS_COLORS } from '@/constants/task-status';
-import { STYLE_CONSTANTS } from '@/constants/ui';
 import { TagSelectionModal } from '@/components/add-task/tag-selection-modal';
 import { DatePickerModal } from '@/components/add-task/date-picker-modal';
-import { type TaskTags } from '@/components/ui/tag-display-row';
+import { type TaskTags, TagDisplayRow } from '@/components/ui/tag-display-row';
 import { DEFAULT_TAG_GROUP_ORDER, TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { type TaskStatus } from '@/types/task-status';
 import { get, patch, ApiClientError, ApiErrorType } from '@/services/api/client';
 import { mapStatusFromBackend, mapStatusToBackend, type BackendTaskStatus } from '@/utils/mapping/status';
 import { formatDate } from '@/utils/formatting/date';
-
-const getSubtaskPadding = (responsive: ReturnType<typeof useResponsive>) => {
-  if (responsive.isMobile) return STYLE_CONSTANTS.subtaskPadding.mobile;
-  if (responsive.isTablet) return STYLE_CONSTANTS.subtaskPadding.tablet;
-  return STYLE_CONSTANTS.subtaskPadding.desktop;
-};
 
 const isStatusComplete = (status: TaskStatus) => status === 'Done' || status === 'Archive';
 
@@ -184,6 +182,10 @@ export default function TasksScreen() {
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hoveredField, setHoveredField] = useState<{ taskId: string; field: string } | null>(null);
+  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: string } | null>(null);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [hoveredSubtaskId, setHoveredSubtaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
 
@@ -581,9 +583,29 @@ export default function TasksScreen() {
     router.push('/add_task');
   };
 
+  // Reusable mouse hover handlers
+  const containerHandlersProps = {
+    hoveredSubtaskId,
+    setHoveredTaskId,
+    setHoveredSubtaskId,
+  };
+  const editableFieldHandlersProps = {
+    ...containerHandlersProps,
+    setHoveredField,
+    setHoveredSubtaskField,
+  };
+
+  const createMouseHandlers = {
+    container: useContainerHandlers(containerHandlersProps),
+    editableField: useEditableFieldHandlers(editableFieldHandlersProps),
+    clearHover: useClearHoverHandlers(containerHandlersProps),
+  };
+
   const renderItem = ({ item }: { item: TaskItem & { subtasks: TaskItem[], displayTime: number } }) => {
     const isExpanded = expandedIds.has(item.id);
     const hasSubtasks = item.subtasks.length > 0;
+    const isTitleHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'title';
+    const isDescHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'description';
 
     // Progress calculation
     const totalSub = item.subtasks.length;
@@ -600,10 +622,17 @@ export default function TasksScreen() {
       router.push(`/add_task?taskId=${item.id}`);
     };
 
+    // Only show hover if no subtask is hovered
+    const isTaskHovered = hoveredTaskId === item.id && !hoveredSubtaskId;
+
     return (
       <Pressable
         onPress={handleTaskPress}
-        style={styles.card}
+        style={[
+          styles.card,
+          isTaskHovered && Platform.OS === 'web' && styles.cardHovered,
+        ]}
+        {...createMouseHandlers.container(item.id, false)}
       >
         <View style={[styles.taskHeader, { padding: layout.cardHeaderPadding }]}>
 
@@ -626,10 +655,17 @@ export default function TasksScreen() {
             </Pressable>
 
             {/* Title (editable) */}
-            <View style={styles.titleContainer}>
+            <View
+              style={styles.titleContainer}
+              {...createMouseHandlers.editableField(item.id, 'title', false)}
+            >
               <EditableField
                 value={item.title}
-                textStyle={[styles.taskTitle, { fontSize: layout.taskTitleSize }]}
+                textStyle={[
+                  styles.taskTitle,
+                  { fontSize: layout.taskTitleSize },
+                  isTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                ]}
                 onSave={(val) => updateTaskField(item.id, 'title', val)}
               />
             </View>
@@ -643,16 +679,34 @@ export default function TasksScreen() {
           </View>
 
           {/* Description (editable) */}
-          <EditableField
-            value={item.description}
-            placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
-            textStyle={[styles.taskDesc, { fontSize: layout.taskDescSize }]}
-            onSave={(val) => updateTaskField(item.id, 'description', val)}
-          />
+          <View
+            {...createMouseHandlers.editableField(item.id, 'description', false)}
+          >
+            <EditableField
+              value={item.description}
+              placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
+              textStyle={[
+                styles.taskDesc,
+                { fontSize: layout.taskDescSize },
+                isDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+              ]}
+              onSave={(val) => updateTaskField(item.id, 'description', val)}
+            />
+          </View>
 
           {/* Tags */}
-          <View style={styles.tagsRow}>
-            <TagsDisplay tags={item.tags} onEdit={() => openTagModalForTask(item.id, true)} />
+          <View
+            style={styles.tagsContainer}
+            {...createMouseHandlers.clearHover(item.id, false)}
+          >
+            <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
+            <View style={styles.tagsRow}>
+              <TagDisplayRow
+                tags={buildTaskTagsFromTask(item)}
+                onEdit={() => openTagModalForTask(item.id, true)}
+                tagGroupColors={tagGroupColors}
+              />
+            </View>
           </View>
 
           {/* Show time and deadline for single task */}
@@ -661,14 +715,7 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={styles.deadlineDisplay}
                 onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                  onMouseLeave: (e: React.MouseEvent) => {
-                    // Mouse leave handler for web platform
-                  },
-                } : {})}
+                {...createMouseHandlers.clearHover(item.id, false)}
               >
                 <Ionicons name="calendar-outline" size={14} color="#666" />
                 <Text style={styles.deadlineText}>
@@ -697,14 +744,7 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={styles.deadlineDisplay}
                 onPress={() => setDatePickers((prev) => ({ ...prev, [item.id]: true }))}
-                {...(Platform.OS === 'web' ? {
-                  onMouseEnter: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                  onMouseLeave: (e: React.MouseEvent) => {
-                    // Mouse leave handler for web platform
-                  },
-                } : {})}
+                {...createMouseHandlers.clearHover(item.id, false)}
               >
                 <Ionicons name="calendar-outline" size={14} color="#666" />
                 <Text style={styles.deadlineText}>
@@ -734,10 +774,19 @@ export default function TasksScreen() {
         {isExpanded && hasSubtasks && (
           <View style={styles.subtaskList}>
             {item.subtasks.map((sub) => {
-              const { horizontal: subtaskPaddingH, vertical: subtaskPaddingV } = getSubtaskPadding(responsive);
               const subStatusComplete = isStatusComplete(sub.status);
+              const isSubtaskTitleHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'title';
+              const isSubtaskDescHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'description';
+              const isSubtaskHovered = hoveredSubtaskId === sub.id;
               return (
-              <View key={sub.id} style={[styles.subtaskContainer, { paddingHorizontal: subtaskPaddingH, paddingVertical: subtaskPaddingV }]}>
+              <View
+                key={sub.id}
+                style={[
+                  styles.subtaskContainer,
+                  isSubtaskHovered && Platform.OS === 'web' && styles.subtaskContainerHovered,
+                ]}
+                {...createMouseHandlers.container(sub.id, true)}
+              >
                 <View style={styles.subtaskRow}>
                   <View style={styles.subtaskContent}>
                     <View style={styles.subtaskHeaderRow}>
@@ -748,38 +797,57 @@ export default function TasksScreen() {
                       })}
 
                       {/* Subtask title (editable) */}
-                      <EditableField
-                        value={sub.title}
-                        textStyle={[styles.subtaskText, subStatusComplete && styles.completedText]}
-                        onSave={(val) => updateTaskField(sub.id, 'title', val)}
-                      />
+                      <View
+                        style={styles.titleContainer}
+                        {...createMouseHandlers.editableField(sub.id, 'title', true)}
+                      >
+                        <EditableField
+                          value={sub.title}
+                          textStyle={[
+                            styles.subtaskText,
+                            subStatusComplete && styles.completedText,
+                            isSubtaskTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                          ]}
+                          onSave={(val) => updateTaskField(sub.id, 'title', val)}
+                        />
+                      </View>
                     </View>
 
                     {/* Subtask description (editable) */}
-                    <EditableField
-                      value={sub.description}
-                      placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
-                      textStyle={styles.subtaskDesc}
-                      onSave={(val) => updateTaskField(sub.id, 'description', val)}
-                    />
+                    <View
+                      {...createMouseHandlers.editableField(sub.id, 'description', true)}
+                    >
+                      <EditableField
+                        value={sub.description}
+                        placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
+                        textStyle={[
+                          styles.subtaskDesc,
+                          isSubtaskDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                        ]}
+                        onSave={(val) => updateTaskField(sub.id, 'description', val)}
+                      />
+                    </View>
 
                     {/* Subtask Meta */}
                     <View style={styles.subtaskMetaContainer}>
-                      <View style={[styles.tagsRow, styles.subtaskTagsRow]}>
-                        <TagsDisplay tags={sub.tags} onEdit={() => openTagModalForTask(sub.id, false)} />
+                      <View
+                        style={styles.subtaskTagsContainer}
+                        {...createMouseHandlers.clearHover(sub.id, true)}
+                      >
+                        <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
+                        <View style={styles.tagsRow}>
+                          <TagDisplayRow
+                            tags={buildTaskTagsFromTask(sub)}
+                            onEdit={() => openTagModalForTask(sub.id, false)}
+                            tagGroupColors={tagGroupColors}
+                          />
+                        </View>
                       </View>
                       <View style={styles.subtaskTimeDeadlineRow}>
                         <TouchableOpacity
                           style={styles.deadlineDisplay}
                           onPress={() => setDatePickers((prev) => ({ ...prev, [sub.id]: true }))}
-                          {...(Platform.OS === 'web' ? {
-                            onMouseEnter: (e: React.MouseEvent) => {
-                              e.stopPropagation();
-                            },
-                            onMouseLeave: (e: React.MouseEvent) => {
-                              // Mouse leave handler for web platform
-                            },
-                          } : {})}
+                          {...createMouseHandlers.clearHover(sub.id, true)}
                         >
                           <Ionicons name="calendar-outline" size={14} color="#666" />
                           <Text style={styles.deadlineText}>
@@ -994,48 +1062,61 @@ export default function TasksScreen() {
   );
 }
 
-const TagsDisplay = ({ tags, onEdit }: { tags: TaskItem['tags']; onEdit: () => void }) => (
-  <Pressable
-    onPress={onEdit}
-    style={({ pressed }) => [styles.tagsPressable, pressed && { opacity: 0.7 }]}
-  >
-    <View style={styles.tagChipRow}>
-      {tags.place && (
-        <View style={[styles.miniTag, { backgroundColor: '#E0F2F1' }]}>
-          <Text style={[styles.miniTagText, { color: '#00695C' }]}>{tags.place}</Text>
-        </View>
-      )}
-      {tags.priority && (
-        <View style={[styles.miniTag, { backgroundColor: '#FFF3E0' }]}>
-          <Text style={[styles.miniTagText, { color: '#E65100' }]}>{tags.priority}</Text>
-        </View>
-      )}
-      {tags.attention && (
-        <View style={[styles.miniTag, { backgroundColor: '#F3E5F5' }]}>
-          <Text style={[styles.miniTagText, { color: '#7B1FA2' }]}>{tags.attention}</Text>
-        </View>
-      )}
-      {tags.tools.slice(0, 2).map((t) => (
-        <View key={t} style={[styles.miniTag, { backgroundColor: '#E3F2FD' }]}>
-          <Text style={[styles.miniTagText, { color: '#1565C0' }]}>{t}</Text>
-        </View>
-      ))}
-    </View>
-    <View style={styles.editIcon}>
-      <Ionicons name="create-outline" size={14} color="#666" />
-    </View>
-  </Pressable>
-);
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   headerTitle: { fontWeight: 'bold', color: '#333' },
   listContent: { paddingBottom: 80 },
-  card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, overflow: 'hidden', elevation: 2 },
-
-  taskHeader: {},
-  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease-in-out',
+        cursor: 'pointer',
+      },
+      default: {
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+    }),
+  },
+  cardHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderColor: '#2196f3',
+        boxShadow: '0px 4px 6px 0px rgba(33, 150, 243, 0.15)',
+      },
+      default: {},
+    }),
+  },
+  editableFieldHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderBottomColor: '#2196f3',
+      },
+      default: {},
+    }),
+  },
+  taskHeader: {
+    gap: 8,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
   categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
   categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
   titleContainer: { flex: 1 },
@@ -1069,13 +1150,61 @@ const styles = StyleSheet.create({
   totalTimeText: { fontSize: 12, fontWeight: '600', color: '#555' },
 
   // Subtasks
-  subtaskList: { backgroundColor: '#FAFAFA', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingVertical: 4 },
-  subtaskContainer: { borderBottomWidth: 1, borderBottomColor: '#eee' },
-  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  subtaskContent: { flex: 1, marginLeft: 0 },
-  subtaskHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  subtaskText: { fontSize: 15, color: '#333', fontWeight: '500', flex: 1 },
-  subtaskDesc: { fontSize: 13, color: '#999', marginTop: 2 },
+  subtaskList: { paddingVertical: 4, gap: 12 },
+  subtaskContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease-in-out',
+      },
+      default: {
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+    }),
+  },
+  subtaskContainerHovered: {
+    ...Platform.select({
+      web: {
+        backgroundColor: '#f5f9ff',
+        borderColor: '#2196f3',
+        boxShadow: '0px 4px 6px 0px rgba(33, 150, 243, 0.15)',
+      },
+      default: {},
+    }),
+  },
+  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  subtaskContent: { flex: 1, marginLeft: 0, gap: 8 },
+  subtaskHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 4,
+  },
+  subtaskDesc: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
   completedText: { textDecorationLine: 'line-through', color: '#aaa' },
   subtaskMetaRow: { marginTop: 8 },
   subtaskMetaContainer: {
@@ -1099,6 +1228,9 @@ const styles = StyleSheet.create({
   },
 
   // Tags & Time Editing
+  tagsContainer: { marginTop: 8, gap: 4 },
+  tagsLabel: { fontSize: 12, fontWeight: '600', color: '#666', marginBottom: 4 },
+  subtaskTagsContainer: { marginTop: 8, gap: 4 },
   tagsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, flexWrap: 'wrap', marginTop: 4 },
   tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
