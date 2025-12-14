@@ -100,7 +100,6 @@ export function TagSelectionModal({
                   const tags = tagGroups[groupName] || []; // Default to empty array instead of null
                   const groupConfig = tagGroupConfigs[groupName] || { isSingleSelect: false, allowAddTags: true };
                   const isSingleSelect = groupConfig.isSingleSelect;
-                  // Show add tag button for all groups (even if allowAddTags is false, we show it for now)
                   const allowAddTags = groupConfig.allowAddTags !== false; // Default to true if not set
                   const selectedTags = tempTags.tagGroups?.[groupName] || [];
                   const isSelected = isSingleSelect ? selectedTags.length > 0 && selectedTags[0] : null;
@@ -137,32 +136,34 @@ export function TagSelectionModal({
                           </TouchableOpacity>
                         );
                       })}
-                      {/* Always show add tag button for all groups */}
-                      {editingTagInGroup?.groupName === groupName ? (
-                        <View style={styles.newPlaceInputContainer}>
-                          <TextInput
-                            style={styles.newPlaceInput}
-                            placeholder={newTagPlaceholder}
-                            placeholderTextColor="#ccc"
-                            value={newTagInGroupName}
-                            onChangeText={onNewTagInGroupNameChange}
-                            autoFocus
-                            onSubmitEditing={onSaveTagToGroup}
-                          />
-                          <TouchableOpacity style={styles.savePlaceBtn} onPress={onSaveTagToGroup}>
-                            <Ionicons name="checkmark" size={16} color="#4CAF50" />
+                      {/* Show add tag button only if the group allows adding tags */}
+                      {allowAddTags && (
+                        editingTagInGroup?.groupName === groupName ? (
+                          <View style={styles.newPlaceInputContainer}>
+                            <TextInput
+                              style={styles.newPlaceInput}
+                              placeholder={newTagPlaceholder}
+                              placeholderTextColor="#ccc"
+                              value={newTagInGroupName}
+                              onChangeText={onNewTagInGroupNameChange}
+                              autoFocus
+                              onSubmitEditing={onSaveTagToGroup}
+                            />
+                            <TouchableOpacity style={styles.savePlaceBtn} onPress={onSaveTagToGroup}>
+                              <Ionicons name="checkmark" size={16} color="#4CAF50" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.cancelPlaceBtn} onPress={onCancelTagInGroup}>
+                              <Ionicons name="close" size={16} color="#666" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => onAddTagToGroup(groupName)}
+                          >
+                            <Ionicons name="add" size={18} color="#666" />
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.cancelPlaceBtn} onPress={onCancelTagInGroup}>
-                            <Ionicons name="close" size={16} color="#666" />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <TouchableOpacity
-                          style={styles.addButton}
-                          onPress={() => onAddTagToGroup(groupName)}
-                        >
-                          <Ionicons name="add" size={18} color="#666" />
-                        </TouchableOpacity>
+                        )
                       )}
                     </View>
                   </View>

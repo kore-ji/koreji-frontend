@@ -8,9 +8,9 @@ export interface TagGroupResponse {
   id: string;
   name: string;
   type: string;
-  is_system: boolean;
   is_single_select: boolean;
-  allow_add_tags: boolean;
+  allow_add_tag: boolean; // Note: backend uses singular "allow_add_tag"
+  created_at: string;
 }
 
 /**
@@ -51,12 +51,12 @@ export function useTagGroups() {
     setLoading(true);
     setError(null);
     try {
-      const payload: { name: string; is_single_select?: boolean; allow_add_tags?: boolean } = { name };
+      const payload: { name: string; is_single_select?: boolean; allow_add_tag?: boolean } = { name };
       if (isSingleSelect !== undefined) {
         payload.is_single_select = isSingleSelect;
       }
       if (allowAddTags !== undefined) {
-        payload.allow_add_tags = allowAddTags;
+        payload.allow_add_tag = allowAddTags; // Backend uses singular "allow_add_tag"
       }
       console.log('[use-tag-groups] Creating tag group with payload:', payload);
       const newGroup = await post<TagGroupResponse>('/api/tasks/tag-groups', payload);

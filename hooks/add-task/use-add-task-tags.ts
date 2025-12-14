@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { type LocalSubTask } from '@/types/add-task';
 import { TAG_GROUP_COLORS } from '@/constants/task-tags';
-import { useTagGroups, type TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
+import { useTagGroups } from '@/hooks/tasks/use-tag-groups';
+import type { TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
 import { useTags, type TagResponse } from '@/hooks/tasks/use-tags';
 
 /**
@@ -75,11 +76,14 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     if (dbTagGroups.length > 0) {
       // Fetch tags for all groups and accumulate them
       const fetchAllTags = async () => {
+        console.log('[use-add-task-tags] Fetching tags for', dbTagGroups.length, 'tag groups');
         const fetchedTags: TagResponse[] = [];
         for (const group of dbTagGroups) {
           try {
             const { get } = await import('@/services/api/client');
+            console.log(`[use-add-task-tags] Fetching tags for group: ${group.name} (${group.id})`);
             const groupTags = await get<TagResponse[]>(`/api/tasks/tag-groups/${group.id}/tags`);
+            console.log(`[use-add-task-tags] Fetched ${Array.isArray(groupTags) ? groupTags.length : 0} tags for group: ${group.name}`);
             if (Array.isArray(groupTags)) {
               fetchedTags.push(...groupTags);
             }
@@ -87,30 +91,33 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
             console.error(`[Fetch Tags] Error fetching tags for group ${group.id}:`, err);
           }
         }
+        console.log('[use-add-task-tags] Total tags fetched:', fetchedTags.length);
         setAllTags(fetchedTags);
       };
       fetchAllTags();
+    } else {
+      console.log('[use-add-task-tags] No tag groups to fetch tags for');
+      setAllTags([]);
     }
   }, [dbTagGroups]);
 
   // Transform database data into the format expected by components
   useEffect(() => {
+    console.log('[use-add-task-tags] Transforming data - dbTagGroups:', dbTagGroups.length, 'allTags:', allTags.length, 'categoriesFromTasks:', categoriesFromTasks.length);
     const groupsMap: { [groupName: string]: string[] } = {};
     const groupsOrder: string[] = [];
     const groupsColors: { [groupName: string]: { bg: string; text: string } } = {};
     const groupsConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } } = {};
 
-    // Find Category group from database if it exists
-    const categoryGroup = dbTagGroups.find(g => g.name === 'Category');
+    // Build Category group: prefer DB group tags, fallback to categories from tasks
+    const categoryGroup = dbTagGroups.find((g) => g.name === 'Category');
     let categoryTags: string[] = [];
-    
+
     if (categoryGroup) {
-      // Use Category group from database (tags table)
       const groupTags = allTags.filter((tag) => tag.tag_group_id === categoryGroup.id);
       categoryTags = groupTags.map((tag) => tag.name);
       console.log('[use-add-task-tags] Found Category group in database with', categoryTags.length, 'tags');
     } else if (categoriesFromTasks.length > 0) {
-      // Fallback to categories from tasks table if no Category group exists
       categoryTags = categoriesFromTasks;
       console.log('[use-add-task-tags] Using categories from tasks table:', categoryTags.length, 'categories');
     }
@@ -150,25 +157,28 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
           console.log('[use-add-task-tags] Skipping Category group (already added at top)');
           return;
         }
-        
+
         // Get tags for this group (may be empty array if no tags exist yet)
         const groupTags = allTags.filter((tag) => tag.tag_group_id === group.id);
         const tagNames = groupTags.map((tag) => tag.name);
+        console.log(`[use-add-task-tags] Group "${group.name}" has ${tagNames.length} tags`);
 
         // Always include the group, even if it has no tags
         groupsMap[group.name] = tagNames;
         groupsOrder.push(group.name);
-        
+
         // Assign color based on index (skip first color as Category used it)
         const colorIndex = (index + 1) % TAG_GROUP_COLORS.length;
         groupsColors[group.name] = TAG_GROUP_COLORS[colorIndex];
-        
+
         // Store config from database
         groupsConfigs[group.name] = {
           isSingleSelect: group.is_single_select,
-          allowAddTags: group.allow_add_tags,
+          allowAddTags: group.allow_add_tag, // Backend uses singular "allow_add_tag"
         };
       });
+    } else {
+      console.log('[use-add-task-tags] No tag groups from database');
     }
 
     // Merge with pending tag groups (groups created but not saved to DB yet)
@@ -204,6 +214,7 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
       }
     });
 
+    console.log('[use-add-task-tags] Final groupsMap:', Object.keys(groupsMap).length, 'groupsOrder:', groupsOrder.length);
     setTagGroups(groupsMap);
     setTagGroupOrder(groupsOrder);
     setTagGroupColors(groupsColors);
@@ -223,7 +234,7 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
       // Also update the hook's state
       await fetchTagGroups();
       
-      // Fetch tags for each group (including Category if it exists)
+      // Fetch tags for each group
       if (Array.isArray(freshTagGroups) && freshTagGroups.length > 0) {
         const fetchedTags: TagResponse[] = [];
         for (const group of freshTagGroups) {
@@ -240,9 +251,8 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
         console.log('[use-add-task-tags] Total tags fetched in openTagModal:', fetchedTags.length);
         setAllTags(fetchedTags);
       }
-      
-      // Also refetch categories from tasks table as fallback
-      // Note: This won't overwrite pending Category tags - they're preserved in pendingTags state
+
+      // Also refetch categories from tasks table as fallback (keeps pending Category tags intact)
       try {
         const categories = await get<string[]>('/api/tasks/categories');
         console.log('[use-add-task-tags] Fetched categories from tasks:', categories);
