@@ -14,6 +14,9 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
   
   // Local state to store all tags from all groups
   const [allTags, setAllTags] = useState<TagResponse[]>([]);
+  
+  // Categories from tasks table
+  const [categoriesFromTasks, setCategoriesFromTasks] = useState<string[]>([]);
 
   const [editingTarget, setEditingTarget] = useState<'main' | string | null>(null);
   const [tempTags, setTempTags] = useState<TaskTags>({ tagGroups: {} });
@@ -42,9 +45,23 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string; groupId: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
 
-  // Fetch tag groups and tags from database on mount
+  // Fetch tag groups, tags, and categories from database on mount
   useEffect(() => {
     fetchTagGroups();
+    
+    // Fetch categories from tasks table
+    const fetchCategories = async () => {
+      try {
+        const { get } = await import('@/services/api/client');
+        const categories = await get<string[]>('/api/tasks/categories');
+        console.log('[use-add-task-tags] Fetched categories from tasks:', categories);
+        setCategoriesFromTasks(Array.isArray(categories) ? categories : []);
+      } catch (err) {
+        console.error('[use-add-task-tags] Error fetching categories:', err);
+        setCategoriesFromTasks([]);
+      }
+    };
+    fetchCategories();
   }, [fetchTagGroups]);
 
   // When tag groups are loaded, fetch tags for each group
@@ -77,9 +94,25 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     const groupsColors: { [groupName: string]: { bg: string; text: string } } = {};
     const groupsConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } } = {};
 
-    // Add groups from database
+    // Add Category group first (from tasks table)
+    if (categoriesFromTasks.length > 0) {
+      groupsMap['Category'] = categoriesFromTasks;
+      groupsOrder.push('Category');
+      groupsColors['Category'] = TAG_GROUP_COLORS[0]; // Use first color for Category
+      groupsConfigs['Category'] = {
+        isSingleSelect: true,
+        allowAddTags: true,
+      };
+    }
+
+    // Add groups from database (skip if Category already exists)
     if (dbTagGroups.length > 0) {
       dbTagGroups.forEach((group, index) => {
+        // Skip Category group if we're using categories from tasks
+        if (group.name === 'Category' && categoriesFromTasks.length > 0) {
+          return;
+        }
+        
         // Get tags for this group (may be empty array if no tags exist yet)
         const groupTags = allTags.filter((tag) => tag.tag_group_id === group.id);
         const tagNames = groupTags.map((tag) => tag.name);
@@ -88,8 +121,8 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
         groupsMap[group.name] = tagNames;
         groupsOrder.push(group.name);
         
-        // Assign color based on index (rotate through available colors)
-        const colorIndex = index % TAG_GROUP_COLORS.length;
+        // Assign color based on index (rotate through available colors, skip first if Category used it)
+        const colorIndex = (index + (categoriesFromTasks.length > 0 ? 1 : 0)) % TAG_GROUP_COLORS.length;
         groupsColors[group.name] = TAG_GROUP_COLORS[colorIndex];
         
         // Store config from database
@@ -132,7 +165,7 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     setTagGroupOrder(groupsOrder);
     setTagGroupColors(groupsColors);
     setTagGroupConfigs(groupsConfigs);
-  }, [dbTagGroups, allTags, pendingTagGroups, pendingTags]);
+  }, [dbTagGroups, allTags, pendingTagGroups, pendingTags, categoriesFromTasks]);
 
   const openTagModal = (target: 'main' | string) => {
     // Refetch tag groups and tags to ensure we have the latest data

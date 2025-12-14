@@ -15,6 +15,9 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
   
   // Local state to store all tags from all groups
   const [allTags, setAllTags] = useState<TagResponse[]>([]);
+  
+  // Categories from tasks table
+  const [categoriesFromTasks, setCategoriesFromTasks] = useState<string[]>([]);
 
   const [editingTagTarget, setEditingTagTarget] = useState<'main' | string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -37,9 +40,23 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
   const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string; groupId: string } | null>(null);
   const [newTagInGroupName, setNewTagInGroupName] = useState('');
 
-  // Fetch tag groups and tags from database on mount
+  // Fetch tag groups, tags, and categories from database on mount
   useEffect(() => {
     fetchTagGroups();
+    
+    // Fetch categories from tasks table
+    const fetchCategories = async () => {
+      try {
+        const { get } = await import('@/services/api/client');
+        const categories = await get<string[]>('/api/tasks/categories');
+        console.log('[use-task-tags] Fetched categories from tasks:', categories);
+        setCategoriesFromTasks(Array.isArray(categories) ? categories : []);
+      } catch (err) {
+        console.error('[use-task-tags] Error fetching categories:', err);
+        setCategoriesFromTasks([]);
+      }
+    };
+    fetchCategories();
   }, [fetchTagGroups]);
 
   // When tag groups are loaded, fetch tags for each group
@@ -67,22 +84,40 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
 
   // Transform database data into the format expected by components
   useEffect(() => {
-    if (dbTagGroups.length > 0) {
-      const groupsMap: { [groupName: string]: string[] } = {};
-      const groupsOrder: string[] = [];
-      const groupsColors: { [groupName: string]: { bg: string; text: string } } = {};
-      const groupsConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } } = {};
+    const groupsMap: { [groupName: string]: string[] } = {};
+    const groupsOrder: string[] = [];
+    const groupsColors: { [groupName: string]: { bg: string; text: string } } = {};
+    const groupsConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } } = {};
 
+    // Add Category group first (from tasks table)
+    if (categoriesFromTasks.length > 0) {
+      groupsMap['Category'] = categoriesFromTasks;
+      groupsOrder.push('Category');
+      groupsColors['Category'] = TAG_GROUP_COLORS[0]; // Use first color for Category
+      groupsConfigs['Category'] = {
+        isSingleSelect: true,
+        allowAddTags: true,
+      };
+    }
+
+    // Add groups from database (skip if Category already exists)
+    if (dbTagGroups.length > 0) {
       dbTagGroups.forEach((group, index) => {
-        // Get tags for this group
+        // Skip Category group if we're using categories from tasks
+        if (group.name === 'Category' && categoriesFromTasks.length > 0) {
+          return;
+        }
+        
+        // Get tags for this group (may be empty array if no tags exist yet)
         const groupTags = allTags.filter((tag) => tag.tag_group_id === group.id);
         const tagNames = groupTags.map((tag) => tag.name);
 
+        // Always include the group, even if it has no tags
         groupsMap[group.name] = tagNames;
         groupsOrder.push(group.name);
         
-        // Assign color based on index (rotate through available colors)
-        const colorIndex = index % TAG_GROUP_COLORS.length;
+        // Assign color based on index (rotate through available colors, skip first if Category used it)
+        const colorIndex = (index + (categoriesFromTasks.length > 0 ? 1 : 0)) % TAG_GROUP_COLORS.length;
         groupsColors[group.name] = TAG_GROUP_COLORS[colorIndex];
         
         // Store config from database
@@ -91,13 +126,13 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
           allowAddTags: group.allow_add_tags,
         };
       });
-
-      setTagGroups(groupsMap);
-      setTagGroupOrder(groupsOrder);
-      setTagGroupColors(groupsColors);
-      setTagGroupConfigs(groupsConfigs);
     }
-  }, [dbTagGroups, allTags]);
+
+    setTagGroups(groupsMap);
+    setTagGroupOrder(groupsOrder);
+    setTagGroupColors(groupsColors);
+    setTagGroupConfigs(groupsConfigs);
+  }, [dbTagGroups, allTags, categoriesFromTasks]);
 
   const openTagModalForTask = (taskId: string, isMainTask: boolean) => {
     // Refetch tag groups and tags to ensure we have the latest data
