@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { type LocalSubTask } from '@/types/add-task';
 import { TAG_GROUP_COLORS } from '@/constants/task-tags';
-import { useTagGroups } from '@/hooks/tasks/use-tag-groups';
+import { useTagGroups, type TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
 import { useTags, type TagResponse } from '@/hooks/tasks/use-tags';
 
 /**
@@ -20,6 +20,12 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
 
   const [editingTarget, setEditingTarget] = useState<'main' | string | null>(null);
   const [tempTags, setTempTags] = useState<TaskTags>({ tagGroups: {} });
+  const tempTagsRef = useRef<TaskTags>({ tagGroups: {} });
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    tempTagsRef.current = tempTags;
+  }, [tempTags]);
   
   // Tag groups structure: { [groupName]: string[] } (tag names)
   const [tagGroups, setTagGroups] = useState<{ [groupName: string]: string[] }>({});
@@ -94,22 +100,54 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     const groupsColors: { [groupName: string]: { bg: string; text: string } } = {};
     const groupsConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } } = {};
 
-    // Add Category group first (from tasks table)
-    if (categoriesFromTasks.length > 0) {
-      groupsMap['Category'] = categoriesFromTasks;
-      groupsOrder.push('Category');
-      groupsColors['Category'] = TAG_GROUP_COLORS[0]; // Use first color for Category
-      groupsConfigs['Category'] = {
-        isSingleSelect: true,
-        allowAddTags: true,
-      };
+    // Find Category group from database if it exists
+    const categoryGroup = dbTagGroups.find(g => g.name === 'Category');
+    let categoryTags: string[] = [];
+    
+    if (categoryGroup) {
+      // Use Category group from database (tags table)
+      const groupTags = allTags.filter((tag) => tag.tag_group_id === categoryGroup.id);
+      categoryTags = groupTags.map((tag) => tag.name);
+      console.log('[use-add-task-tags] Found Category group in database with', categoryTags.length, 'tags');
+    } else if (categoriesFromTasks.length > 0) {
+      // Fallback to categories from tasks table if no Category group exists
+      categoryTags = categoriesFromTasks;
+      console.log('[use-add-task-tags] Using categories from tasks table:', categoryTags.length, 'categories');
     }
 
-    // Add groups from database (skip if Category already exists)
+    // Merge with pending Category tags (temporary categories added by user)
+    const pendingCategoryTags = pendingTags['Category'] || [];
+    if (pendingCategoryTags.length > 0) {
+      // Add pending categories that don't already exist
+      const newCategoryTags = pendingCategoryTags.filter(t => !categoryTags.includes(t));
+      categoryTags = [...categoryTags, ...newCategoryTags];
+      console.log('[use-add-task-tags] Merged', pendingCategoryTags.length, 'pending Category tags');
+    }
+
+    // Also include the currently selected category from tempTags to ensure it remains visible
+    // This handles cases where the category was selected but not yet added to pendingTags
+    const selectedCategory = tempTagsRef.current.tagGroups?.Category?.[0];
+    if (selectedCategory && !categoryTags.includes(selectedCategory)) {
+      categoryTags = [...categoryTags, selectedCategory];
+      console.log('[use-add-task-tags] Added selected category from tempTags to list:', selectedCategory);
+    }
+
+    // Always add Category group first at the top of the list
+    groupsMap['Category'] = categoryTags;
+    groupsOrder.push('Category');
+    groupsColors['Category'] = TAG_GROUP_COLORS[0]; // Use first color for Category
+    groupsConfigs['Category'] = {
+      isSingleSelect: true,
+      allowAddTags: true,
+    };
+    console.log('[use-add-task-tags] Added Category group at top with', categoryTags.length, 'items (including temporary)');
+
+    // Add other groups from database (skip Category as it's already added)
     if (dbTagGroups.length > 0) {
       dbTagGroups.forEach((group, index) => {
-        // Skip Category group if we're using categories from tasks
-        if (group.name === 'Category' && categoriesFromTasks.length > 0) {
+        // Skip Category group as it's already added at the top
+        if (group.name === 'Category') {
+          console.log('[use-add-task-tags] Skipping Category group (already added at top)');
           return;
         }
         
@@ -121,8 +159,8 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
         groupsMap[group.name] = tagNames;
         groupsOrder.push(group.name);
         
-        // Assign color based on index (rotate through available colors, skip first if Category used it)
-        const colorIndex = (index + (categoriesFromTasks.length > 0 ? 1 : 0)) % TAG_GROUP_COLORS.length;
+        // Assign color based on index (skip first color as Category used it)
+        const colorIndex = (index + 1) % TAG_GROUP_COLORS.length;
         groupsColors[group.name] = TAG_GROUP_COLORS[colorIndex];
         
         // Store config from database
@@ -152,7 +190,12 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     });
 
     // Merge pending tags for all groups (including existing groups from DB)
+    // Note: Category was already merged above, so skip it here
     Object.entries(pendingTags).forEach(([groupName, pendingTagNames]) => {
+      if (groupName === 'Category') {
+        // Category was already merged above, skip it
+        return;
+      }
       if (pendingTagNames.length > 0) {
         const existingTags = groupsMap[groupName] || [];
         // Add pending tags that don't already exist
@@ -167,9 +210,51 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     setTagGroupConfigs(groupsConfigs);
   }, [dbTagGroups, allTags, pendingTagGroups, pendingTags, categoriesFromTasks]);
 
-  const openTagModal = (target: 'main' | string) => {
+  const openTagModal = async (target: 'main' | string) => {
     // Refetch tag groups and tags to ensure we have the latest data
-    fetchTagGroups();
+    console.log('[use-add-task-tags] openTagModal called, fetching fresh data...');
+    
+    // Fetch tag groups directly
+    try {
+      const { get } = await import('@/services/api/client');
+      const freshTagGroups = await get<TagGroupResponse[]>('/api/tasks/tag-groups');
+      console.log('[use-add-task-tags] Fetched', freshTagGroups.length, 'tag groups');
+      
+      // Also update the hook's state
+      await fetchTagGroups();
+      
+      // Fetch tags for each group (including Category if it exists)
+      if (Array.isArray(freshTagGroups) && freshTagGroups.length > 0) {
+        const fetchedTags: TagResponse[] = [];
+        for (const group of freshTagGroups) {
+          try {
+            const groupTags = await get<TagResponse[]>(`/api/tasks/tag-groups/${group.id}/tags`);
+            console.log(`[use-add-task-tags] Fetched ${Array.isArray(groupTags) ? groupTags.length : 0} tags for group: ${group.name}`);
+            if (Array.isArray(groupTags)) {
+              fetchedTags.push(...groupTags);
+            }
+          } catch (err) {
+            console.error(`[openTagModal] Error fetching tags for group ${group.id}:`, err);
+          }
+        }
+        console.log('[use-add-task-tags] Total tags fetched in openTagModal:', fetchedTags.length);
+        setAllTags(fetchedTags);
+      }
+      
+      // Also refetch categories from tasks table as fallback
+      // Note: This won't overwrite pending Category tags - they're preserved in pendingTags state
+      try {
+        const categories = await get<string[]>('/api/tasks/categories');
+        console.log('[use-add-task-tags] Fetched categories from tasks:', categories);
+        setCategoriesFromTasks(Array.isArray(categories) ? categories : []);
+      } catch (err) {
+        console.error('[use-add-task-tags] Error fetching categories (endpoint may not exist yet):', err);
+        // Don't clear categoriesFromTasks if fetch fails - keep existing ones
+      }
+    } catch (err) {
+      console.error('[openTagModal] Error fetching tag groups:', err);
+    }
+    
     setEditingTarget(target);
     if (target === 'main') {
       setTempTags({ ...mainTags });
@@ -189,17 +274,34 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
 
   const saveTags = async (onMainTagsSave: (tags: TaskTags) => void, onSubtaskTagsSave: (subtaskId: string, tags: TaskTags) => void) => {
     console.log('[use-add-task-tags] saveTags called - saving pending tag groups and tags to backend');
+    console.log('[use-add-task-tags] tempTags:', tempTags);
+    
+    // If a Category is selected, ensure it's added to pendingTags so it stays in the list
+    const selectedCategory = tempTags.tagGroups?.Category?.[0];
+    if (selectedCategory) {
+      const currentPendingCategories = pendingTags['Category'] || [];
+      if (!currentPendingCategories.includes(selectedCategory)) {
+        setPendingTags((prev) => ({
+          ...prev,
+          Category: [...currentPendingCategories, selectedCategory],
+        }));
+        console.log('[use-add-task-tags] Added selected category to pendingTags:', selectedCategory);
+      }
+    }
     
     // Save pending tag groups and tags to database when Confirm is clicked in modal
+    // Note: Category tags are NOT saved to the tags table - they will be saved to task.category field
     await savePendingTagGroupsAndTags();
     
     // Small delay to ensure DB state is updated
     await new Promise(resolve => setTimeout(resolve, 100));
     
     if (editingTarget === 'main') {
+      // Save tags including Category (Category will be extracted and saved to task.category field)
       onMainTagsSave(tempTags);
+      console.log('[use-add-task-tags] Saved main tags, Category will be saved to task.category field');
     } else if (typeof editingTarget === 'string') {
-      // Ensure Category is removed from subtask tags
+      // Ensure Category is removed from subtask tags (subtasks don't have categories)
       const { Category, ...tagsWithoutCategory } = tempTags.tagGroups || {};
       onSubtaskTagsSave(editingTarget, { tagGroups: tagsWithoutCategory });
     }
@@ -301,16 +403,47 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
         [groupName]: updatedGroupTags,
       },
     });
+
+    // If selecting a Category, ensure it's added to pendingTags AND immediately visible in tagGroups
+    if (groupName === 'Category' && updatedGroupTags.length > 0) {
+      const selectedCategory = updatedGroupTags[0];
+      const currentPendingCategories = pendingTags['Category'] || [];
+      if (!currentPendingCategories.includes(selectedCategory)) {
+        setPendingTags((prev) => ({
+          ...prev,
+          Category: [...currentPendingCategories, selectedCategory],
+        }));
+        console.log('[use-add-task-tags] Added selected category to pendingTags:', selectedCategory);
+      }
+      
+      // Immediately update tagGroups to ensure the selected category is visible in the modal
+      setTagGroups((prev) => {
+        const currentCategoryTags = prev['Category'] || [];
+        if (!currentCategoryTags.includes(selectedCategory)) {
+          return {
+            ...prev,
+            Category: [...currentCategoryTags, selectedCategory],
+          };
+        }
+        return prev;
+      });
+      console.log('[use-add-task-tags] Immediately added selected category to tagGroups:', selectedCategory);
+    }
   };
 
   const handleAddTagToGroup = (groupName: string) => {
     const group = dbTagGroups.find((g) => g.name === groupName);
     // Allow adding tags to both existing groups and pending groups
+    // Also allow for Category group even if it's not in dbTagGroups (it's always shown)
     if (group) {
       setEditingTagInGroup({ groupName, groupId: group.id });
     } else if (pendingTagGroups.has(groupName)) {
       // For pending groups, we don't have a groupId yet, but we can still track it
       // We'll use a temporary ID that will be replaced when the group is saved
+      setEditingTagInGroup({ groupName, groupId: '' });
+    } else if (groupName === 'Category') {
+      // Category group is always shown but might not be in dbTagGroups
+      // Allow adding temporary categories (they'll be saved to task.category field)
       setEditingTagInGroup({ groupName, groupId: '' });
     }
   };
@@ -424,10 +557,17 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     }
 
     // Save pending tags for all groups (both new and existing)
+    // Note: Skip Category tags - they are saved to the task's category field, not as tags
     console.log('[savePendingTagGroupsAndTags] Creating tags in backend...');
     const tagPromises: Promise<void>[] = [];
     Object.entries(pendingTags).forEach(([groupName, tagNames]) => {
       if (tagNames.length === 0) return;
+      
+      // Skip Category group - categories are saved to task.category field, not as tags
+      if (groupName === 'Category') {
+        console.log(`[savePendingTagGroupsAndTags] Skipping Category tags - they will be saved to task.category field`);
+        return;
+      }
 
       let groupId: string | undefined;
       
@@ -476,13 +616,15 @@ export function useAddTaskTags(mainTags: TaskTags, subtasks: LocalSubTask[]) {
     }
     
     // Clear pending state only if everything succeeded
+    // Note: Category tags are NOT saved to tags table - they're saved to task.category field
     console.log('[savePendingTagGroupsAndTags] Checking if all operations succeeded...');
     const failedGroups = createdGroups.filter(g => !g.newGroup).length;
     if (failedGroups === 0) {
       console.log('[savePendingTagGroupsAndTags] All operations succeeded, clearing pending state');
       setPendingTagGroups(new Set());
+      // Clear all pending tags (Category tags will be saved to task.category field, not as tags)
       setPendingTags({});
-      console.log('[savePendingTagGroupsAndTags] Cleared pending state');
+      console.log('[savePendingTagGroupsAndTags] Cleared pending state (Category tags will be saved to task.category field)');
     } else {
       console.error(`[savePendingTagGroupsAndTags] ${failedGroups} tag group(s) failed to create, keeping pending state`);
     }
