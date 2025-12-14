@@ -1,42 +1,37 @@
-import { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useTask } from '@/hooks/tasks/use-task';
+import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useTaskCompletion } from '@/hooks/task-completion/use-task-completion';
+import { CompletionPage1 } from '@/components/task-completion/completion-page-1';
+import { CompletionPage2 } from '@/components/task-completion/completion-page-2';
+import { PaginationDots } from '@/components/task-completion/pagination-dots';
 import { TASK_COMPLETION_STRINGS } from '@/constants/strings/task-completion';
 
+const TOTAL_PAGES = 2;
+
 export default function TaskCompletionScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{
     taskId?: string;
     elapsedTime?: string;
     progressPercent?: string;
   }>();
 
-  const { taskId, progressPercent } = params;
-  const { task, loading, error, fetchTask } = useTask();
-  const progress = progressPercent ? parseInt(progressPercent, 10) : 9;
-
-  // Fetch task data
-  useEffect(() => {
-    if (taskId) {
-      fetchTask(taskId);
-    }
-  }, [taskId, fetchTask]);
-
-  // Handle error by redirecting back
-  useEffect(() => {
-    if (error) {
-      console.error('[Task Completion] Failed to load task:', error);
-      router.back();
-    }
-  }, [error, router]);
-
-  const taskTitle = task?.title || '';
-
-  const handleWhatsNext = () => {
-    router.push('/task-recommend');
-  };
+  const {
+    task,
+    loading,
+    currentPage,
+    progress,
+    elapsedMinutes,
+    taskTitle,
+    handleWhatsNext,
+    goToPreviousPage,
+    goToNextPage,
+  } = useTaskCompletion({
+    taskId: params.taskId,
+    progressPercent: params.progressPercent,
+    elapsedTime: params.elapsedTime,
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -46,46 +41,75 @@ export default function TaskCompletionScreen() {
         </View>
       ) : task ? (
         <View style={styles.content}>
-          {/* Well Done Headline */}
-          <Text style={styles.wellDoneText}>{TASK_COMPLETION_STRINGS.wellDone}</Text>
+          <View style={styles.pageContentWrapper}>
+            {/* Left Navigation Button */}
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                styles.navButtonLeft,
+                currentPage === 0 && styles.navButtonDisabled,
+              ]}
+              onPress={goToPreviousPage}
+              disabled={currentPage === 0}
+              activeOpacity={0.6}
+            >
+              <View
+                style={[
+                  styles.glassButton,
+                  styles.glassButtonWeb,
+                  currentPage === 0 && styles.glassButtonDisabled,
+                ]}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={currentPage === 0 ? '#AAAAAA' : '#1a1a1a'}
+                />
+              </View>
+            </TouchableOpacity>
 
-          {/* You have completed text */}
-          <Text style={styles.completedText}>{TASK_COMPLETION_STRINGS.youHaveCompleted}</Text>
+            {/* Page Content */}
+            <View style={styles.pageContent}>
+              {currentPage === 0 ? (
+                <CompletionPage1
+                  taskTitle={taskTitle}
+                  task={task}
+                  progress={progress}
+                />
+              ) : (
+                <CompletionPage2 elapsedMinutes={elapsedMinutes} />
+              )}
+            </View>
 
-          {/* Task Title */}
-          <Text style={styles.taskTitle}>{taskTitle}</Text>
-
-        {/* Central Image - Placeholder for corgi image */}
-        <View style={styles.imageContainer}>
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>Image</Text>
+            {/* Right Navigation Button */}
+            <TouchableOpacity
+              style={[
+                styles.navButton,
+                styles.navButtonRight,
+                currentPage === TOTAL_PAGES - 1 && styles.navButtonDisabled,
+              ]}
+              onPress={goToNextPage}
+              disabled={currentPage === TOTAL_PAGES - 1}
+              activeOpacity={0.6}
+            >
+              <View
+                style={[
+                  styles.glassButton,
+                  styles.glassButtonWeb,
+                  currentPage === TOTAL_PAGES - 1 && styles.glassButtonDisabled,
+                ]}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={currentPage === TOTAL_PAGES - 1 ? '#AAAAAA' : '#1a1a1a'}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
-          {/* TODO: Replace with actual image asset when available
-          <Image
-            source={require('@/assets/images/corgi-completion.png')}
-            style={styles.image}
-            resizeMode="contain"
-          />
-          */}
-        </View>
 
-        {/* Progress Information */}
-        <View style={styles.progressContainer}>
-          {/* Project/context text in brackets */}
-          <Text style={styles.projectText}>{task?.title}</Text>
-
-          {/* Current completion progress */}
-          <Text style={styles.progressText}>
-            {TASK_COMPLETION_STRINGS.currentCompletionProgress} : {progress}
-            {TASK_COMPLETION_STRINGS.percent}
-          </Text>
-        </View>
-
-        {/* Pagination Dots */}
-        <View style={styles.paginationContainer}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
-        </View>
+          {/* Pagination Dots */}
+          <PaginationDots currentPage={currentPage} totalPages={TOTAL_PAGES} />
 
           {/* What's Next Button */}
           <TouchableOpacity style={styles.whatsNextButton} onPress={handleWhatsNext}>
@@ -109,83 +133,91 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
-  wellDoneText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333333',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  completedText: {
-    fontSize: 16,
-    color: '#333333',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  taskTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  imageContainer: {
+  pageContentWrapper: {
+    flex: 1,
     width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  imagePlaceholder: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: '#999999',
-  },
-  image: {
-    width: 200,
-    height: 200,
-    borderRadius: 8,
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  projectText: {
-    fontSize: 14,
-    color: '#333333',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#333333',
-    textAlign: 'center',
-  },
-  paginationContainer: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 32,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+    paddingHorizontal: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  pageContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    minWidth: 0,
   },
-  dotActive: {
-    backgroundColor: '#333333',
+  navButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
-  dotInactive: {
-    backgroundColor: '#E0E0E0',
+  glassButton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  glassButtonWeb:
+    Platform.OS === 'web'
+      ? ({
+          backdropFilter: 'blur(10px)',
+        } as unknown as ViewStyle)
+      : {},
+  navButtonDisabled: {
+    opacity: 0.4,
+  },
+  glassButtonDisabled: {
+    backgroundColor: 'rgba(240, 240, 240, 0.3)',
+    borderWidth: 0,
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  navButtonLeft: {
+    marginRight: 8,
+  },
+  navButtonRight: {
+    marginLeft: 8,
   },
   whatsNextButton: {
     width: '100%',

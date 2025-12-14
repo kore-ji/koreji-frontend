@@ -6,6 +6,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTask } from '@/hooks/tasks/use-task';
 import { useTaskTimer } from '@/hooks/task-progress/use-task-timer';
 import { TASK_PROGRESS_STRINGS } from '@/constants/strings/task-progress';
+import type { ApiTaskResponse } from '@/types/tasks';
+
+// TEMPORARY: Dummy data for display
+const getDummyTask = (taskId?: string): ApiTaskResponse => ({
+  id: taskId || 'dummy-task-id',
+  parent_id: null,
+  title: 'Complete Project Documentation',
+  description: 'Write comprehensive documentation for the project including API endpoints, database schema, and user guides.',
+  category: 'Work',
+  status: 'in_progress',
+  estimated_minutes: 120,
+  due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  tags: [],
+});
 
 export default function TaskProgressScreen() {
   const router = useRouter();
@@ -13,15 +27,18 @@ export default function TaskProgressScreen() {
   const { taskId } = params;
   
   const timer = useTaskTimer();
-  const { task, loading, error, fetchTask } = useTask();
+  const { task, loading, error, fetchTask, setTask } = useTask();
   const [progressPercent] = useState(9); // Placeholder, should fetch from backend
 
   // Fetch task data
   useEffect(() => {
     if (taskId) {
       fetchTask(taskId);
+    } else {
+      // TEMPORARY: Use dummy data if no taskId
+      setTask(getDummyTask(taskId));
     }
-  }, [taskId, fetchTask]);
+  }, [taskId, fetchTask, setTask]);
 
   // Handle error by redirecting back
   useEffect(() => {
@@ -74,18 +91,18 @@ export default function TaskProgressScreen() {
       </View>
 
       {/* Content */}
-      {loading ? (
+      {loading && taskId ? (
         <View style={styles.content}>
           <ActivityIndicator size="large" color="#333333" />
         </View>
-      ) : task ? (
+      ) : (task || getDummyTask(taskId)) ? (
         <View style={styles.content}>
           {/* Task Title */}
-          <Text style={styles.taskTitle}>{taskTitle}</Text>
+          <Text style={styles.taskTitle}>{(task || getDummyTask(taskId))?.title || taskTitle}</Text>
 
         {/* Scheduled Duration */}
         <Text style={styles.scheduledText}>
-          {TASK_PROGRESS_STRINGS.scheduledFor} {durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
+          {TASK_PROGRESS_STRINGS.scheduledFor} {(task || getDummyTask(taskId))?.estimated_minutes || durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
         </Text>
 
         {/* Activity Indicator */}
