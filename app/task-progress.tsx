@@ -3,28 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTask } from '@/hooks/tasks/use-task';
 import { useTaskTimer } from '@/hooks/task-progress/use-task-timer';
 import { TASK_PROGRESS_STRINGS } from '@/constants/strings/task-progress';
-import type { ApiTaskResponse } from '@/types/tasks';
-
-// TEMPORARY: Dummy data for display
-const getDummyTask = (taskId?: string): ApiTaskResponse => ({
-  id: taskId || 'dummy-task-id',
-  parent_id: null,
-  title: 'Complete Project Documentation',
-  description: 'Write comprehensive documentation for the project including API endpoints, database schema, and user guides.',
-  category: 'Work',
-  status: 'in_progress',
-  estimated_minutes: 120,
-  due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  tags: [],
-});
 
 export default function TaskProgressScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     task_id?: string;
+    task_title?: string;
+    task_duration?: string;
     mode?: string;
     place?: string;
     tool?: string;
@@ -33,30 +20,9 @@ export default function TaskProgressScreen() {
 
   // Use snake_case task_id consistently for route params
   const taskId = params.task_id;
-  
+
   const timer = useTaskTimer();
-  const { task, loading, error, fetchTask, setTask } = useTask();
   const [progressPercent] = useState(9); // Placeholder, should fetch from backend
-
-  // Fetch task data
-  useEffect(() => {
-    if (taskId) {
-      fetchTask(taskId);
-    } else {
-      // TEMPORARY: Use dummy data if no taskId
-      setTask(getDummyTask(taskId));
-    }
-  }, [taskId, fetchTask, setTask]);
-
-  // Log when using task_id fails to load a task
-  useEffect(() => {
-    if (!loading && taskId && (!task || error)) {
-      console.error('[Task Progress] Failed to load task with task_id:', {
-        task_id: taskId,
-        error,
-      });
-    }
-  }, [loading, taskId, task, error]);
 
   // Start timer automatically when page loads (user already clicked "Start Task")
   useEffect(() => {
@@ -67,8 +33,11 @@ export default function TaskProgressScreen() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const taskTitle = task?.title || '';
-  const durationMinutes = task?.estimated_minutes || 0;
+  const taskTitle = params.task_title || '';
+  // Prefer scheduled time from params; fallback to task_duration if needed
+  const durationMinutes =
+    (typeof params.time === 'string' && params.time ? Number(params.time) : undefined) ??
+    (typeof params.task_duration === 'string' && params.task_duration ? Number(params.task_duration) : Number.NaN);
 
   const handlePause = () => {
     if (timer.isRunning) {
@@ -101,18 +70,13 @@ export default function TaskProgressScreen() {
       </View>
 
       {/* Content */}
-      {loading && taskId ? (
-        <View style={styles.content}>
-          <ActivityIndicator size="large" color="#333333" />
-        </View>
-      ) : (task || getDummyTask(taskId)) ? (
-        <View style={styles.content}>
-          {/* Task Title */}
-          <Text style={styles.taskTitle}>{(task || getDummyTask(taskId))?.title || taskTitle}</Text>
+      <View style={styles.content}>
+        {/* Task Title */}
+        <Text style={styles.taskTitle}>{taskTitle || ' '}</Text>
 
         {/* Scheduled Duration */}
         <Text style={styles.scheduledText}>
-          {TASK_PROGRESS_STRINGS.scheduledFor} {(task || getDummyTask(taskId))?.estimated_minutes || durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
+          {TASK_PROGRESS_STRINGS.scheduledFor} {durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
         </Text>
 
         {/* Activity Indicator */}
@@ -140,11 +104,6 @@ export default function TaskProgressScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      ) : (
-        <View style={styles.content}>
-          <Text style={styles.errorText}>Task not found</Text>
-        </View>
-      )}
     </SafeAreaView>
   );
 }

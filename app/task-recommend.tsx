@@ -97,6 +97,8 @@ export default function TaskRecommendScreen() {
         pathname: '/task-progress',
         params: {
           task_id: selectedTask.id,
+          task_title: selectedTask.title,
+          task_duration: String(selectedTask.duration),
           mode: params.mode,
           place: params.place ?? 'task_recommend',
           tool: params.tools ?? 'mobile_app',
