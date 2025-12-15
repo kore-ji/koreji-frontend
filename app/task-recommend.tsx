@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Task } from '@/components/task-recommend/task-card';
 import { TaskList } from '@/components/task-recommend/task-list';
 import { TaskRecommendHeader } from '@/components/task-recommend/task-recommend-header';
@@ -41,6 +42,7 @@ const DUMMY_TASKS: Task[] = [
 const BREAKPOINT_TABLET = 768;
 
 export default function TaskRecommendScreen() {
+  const router = useRouter();
   const totalMinutes = DUMMY_TASKS.reduce((sum, task) => sum + task.duration, 0);
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(DUMMY_TASKS[0]?.id || null);
@@ -78,6 +80,11 @@ export default function TaskRecommendScreen() {
         source: selectedTask.source,
         status: selectedTask.status,
       });
+      
+      // Navigate to task progress page with task data
+      router.push(
+        `/task-progress?taskId=${selectedTask.id}`
+      );
     }
   };
 

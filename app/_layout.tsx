@@ -28,6 +28,22 @@ export default function RootLayout() {
           }}
         />
 
+        <Stack.Screen
+          name="task-progress"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="task-completion"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
