@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTaskTimer } from '@/hooks/task-progress/use-task-timer';
 import { TASK_PROGRESS_STRINGS } from '@/constants/strings/task-progress';
+import { post } from '@/services/api/client';
 
 export default function TaskProgressScreen() {
   const router = useRouter();
@@ -47,12 +48,42 @@ export default function TaskProgressScreen() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // Capture elapsed time from timer before stopping
+    const elapsedSeconds = timer.elapsedSeconds;
     timer.stop();
-    // Navigate to completion page with taskId and elapsed time
-    router.push(
-      `/task-completion?task_id=${taskId}&elapsedTime=${timer.elapsedSeconds}&progressPercent=${progressPercent}`
-    );
+    
+    // Try to create a record, but always navigate to completion page even on failure
+    try {
+      if (taskId) {
+        const toolsArray =
+          typeof params.tool === 'string' && params.tool
+            ? params.tool.split(',').map((t) => t.trim()).filter(Boolean)
+            : [];
+
+        await post('/api/records', {
+          task_id: taskId,
+          mode: params.mode ?? '',
+          place: params.place ?? '',
+          tool: toolsArray,
+          occurred_at: new Date().toISOString(),
+        });
+      } else {
+        console.error('[Task Progress] Cannot create record: missing task_id');
+      }
+    } catch (error) {
+      console.error('[Task Progress] Failed to create record on completion', error);
+    } finally {
+      // Navigate to completion page with taskId and elapsed time from timer, even if record creation failed
+      router.push({
+        pathname: '/task-completion',
+        params: {
+          task_id: taskId ?? '',
+          elapsedTime: String(elapsedSeconds),
+          progressPercent: String(progressPercent),
+        },
+      });
+    }
   };
 
   const handleClose = () => {

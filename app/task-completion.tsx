@@ -59,7 +59,7 @@ export default function TaskCompletionScreen() {
         <View style={styles.content}>
           <ActivityIndicator size="large" color="#333333" />
         </View>
-      ) : task ? (
+      ) : (
         <View style={styles.content}>
           <View style={styles.pageContentWrapper}>
             {/* Left Navigation Button */}
@@ -136,10 +136,6 @@ export default function TaskCompletionScreen() {
           <TouchableOpacity style={styles.whatsNextButton} onPress={handleWhatsNext}>
             <Text style={styles.whatsNextButtonText}>{TASK_COMPLETION_STRINGS.whatsNext}</Text>
           </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.content}>
-          <Text style={styles.errorText}>Task not found</Text>
         </View>
       )}
     </SafeAreaView>
@@ -252,10 +248,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
   },
 });
