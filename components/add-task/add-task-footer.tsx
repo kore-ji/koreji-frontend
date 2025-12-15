@@ -7,11 +7,22 @@ interface AddTaskFooterProps {
 }
 
 export function AddTaskFooter({ onSubmit, submitButtonText, disabled = false }: AddTaskFooterProps) {
+  const handlePress = () => {
+    console.log('[AddTaskFooter] Submit button pressed');
+    console.log('[AddTaskFooter] disabled:', disabled);
+    if (!disabled) {
+      console.log('[AddTaskFooter] Calling onSubmit handler');
+      onSubmit();
+    } else {
+      console.log('[AddTaskFooter] Button is disabled, not calling onSubmit');
+    }
+  };
+
   return (
     <View style={styles.footer}>
       <TouchableOpacity
         style={[styles.submitBtn, disabled && styles.submitBtnDisabled]}
-        onPress={onSubmit}
+        onPress={handlePress}
         disabled={disabled}
       >
         <Text style={[styles.submitBtnText, disabled && styles.submitBtnTextDisabled]}>

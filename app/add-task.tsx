@@ -62,6 +62,7 @@ export default function AddTaskScreen() {
     tagGroups,
     tagGroupOrder,
     tagGroupColors,
+    tagGroupConfigs,
     showTagGroupInput,
     newTagGroupName,
     editingTagInGroup,
@@ -78,6 +79,7 @@ export default function AddTaskScreen() {
     closeTagModal,
     setNewTagInGroupName,
     setNewTagGroupName,
+    savePendingTagGroupsAndTags,
   } = useAddTaskTags(mainTags, subtasks);
 
   // Load task data in edit mode
@@ -94,7 +96,7 @@ export default function AddTaskScreen() {
   );
 
   // Form submission
-  const { isSubmitting, handleSubmit } = useAddTaskSubmit(
+  const { isSubmitting, handleSubmit: handleSubmitBase } = useAddTaskSubmit(
     isEditMode,
     params.taskId,
     mainTitle,
@@ -105,6 +107,36 @@ export default function AddTaskScreen() {
     mainTags,
     subtasks
   );
+
+  // Task submit handler (tag groups/tags are already saved when modal Confirm is clicked)
+  const handleSubmit = async () => {
+    try {
+      console.log('[add-task.tsx] ========== handleSubmit called ==========');
+      console.log('[add-task.tsx] Submit button clicked, starting task submission');
+      console.log('[add-task.tsx] isEditMode:', isEditMode);
+      console.log('[add-task.tsx] mainTitle:', mainTitle);
+      
+      // Note: Tag groups and tags are saved when modal Confirm is clicked, not here
+      // Just submit the task
+      console.log('[add-task.tsx] Submitting task to backend');
+      if (handleSubmitBase) {
+        await handleSubmitBase();
+        console.log('[add-task.tsx] Task submitted successfully');
+      } else {
+        console.error('[add-task.tsx] handleSubmitBase is not available');
+      }
+      
+      console.log('[add-task.tsx] ========== handleSubmit completed ==========');
+    } catch (error) {
+      console.error('[add-task.tsx] ========== ERROR in handleSubmit ==========');
+      console.error('[add-task.tsx] Error details:', error);
+      if (error instanceof Error) {
+        console.error('[add-task.tsx] Error message:', error.message);
+        console.error('[add-task.tsx] Error stack:', error.stack);
+      }
+      throw error;
+    }
+  };
 
   // Update navigation title based on edit mode
   useEffect(() => {
@@ -208,13 +240,15 @@ export default function AddTaskScreen() {
   };
 
   // Tag save handler wrapper
-  const saveTags = () => {
-    saveTagsBase(
+  const saveTags = async () => {
+    console.log('[add-task.tsx] saveTags called from modal Confirm button');
+    await saveTagsBase(
       (tags) => setMainTags(tags),
       (subtaskId, tags) => {
         setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? { ...s, tags } : s)));
       }
     );
+    console.log('[add-task.tsx] saveTags completed');
   };
 
   return (
@@ -342,6 +376,7 @@ export default function AddTaskScreen() {
         tagGroups={tagGroups}
         tagGroupOrder={tagGroupOrder}
         tagGroupColors={tagGroupColors}
+        tagGroupConfigs={tagGroupConfigs}
         editingTagInGroup={editingTagInGroup}
         newTagInGroupName={newTagInGroupName}
         showTagGroupInput={showTagGroupInput}

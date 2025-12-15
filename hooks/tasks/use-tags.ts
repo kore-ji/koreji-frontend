@@ -46,10 +46,13 @@ export function useTags() {
       setLoading(true);
       setError(null);
       try {
-        const newTag = await post<TagResponse>('/api/tasks/tags', {
+        const payload = {
           name,
           tag_group_id: tagGroupId,
-        });
+        };
+        console.log('[use-tags] Creating tag with payload:', payload);
+        const newTag = await post<TagResponse>('/api/tasks/tags', payload);
+        console.log('[use-tags] Tag created successfully:', newTag);
         setTags((prev) => [...prev, newTag]);
         return newTag;
       } catch (err) {
@@ -58,7 +61,7 @@ export function useTags() {
           errorMessage = err.message || errorMessage;
         }
         setError(errorMessage);
-        console.error('[Create Tag] Error:', err);
+        console.error('[use-tags] Create Tag Error:', err);
         return null;
       } finally {
         setLoading(false);

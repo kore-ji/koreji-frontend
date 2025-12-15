@@ -42,6 +42,7 @@ export default function TasksScreen() {
     tagGroups,
     tagGroupOrder,
     tagGroupColors,
+    tagGroupConfigs,
     showTagGroupInput,
     newTagGroupName,
     editingTagInGroup,
@@ -253,6 +254,7 @@ export default function TasksScreen() {
         tagGroups={tagGroups}
         tagGroupOrder={tagGroupOrder}
         tagGroupColors={tagGroupColors}
+        tagGroupConfigs={tagGroupConfigs}
         editingTagInGroup={editingTagInGroup}
         newTagInGroupName={newTagInGroupName}
         showTagGroupInput={showTagGroupInput}

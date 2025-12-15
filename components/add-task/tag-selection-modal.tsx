@@ -1,7 +1,7 @@
 import { Modal, View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { type TaskTags } from '@/components/ui/tag-display-row';
-import { TAG_GROUPS, TAG_GROUP_COLORS } from '@/constants/task-tags';
+import { TAG_GROUP_COLORS } from '@/constants/task-tags';
 
 interface TagSelectionModalProps {
   visible: boolean;
@@ -10,7 +10,8 @@ interface TagSelectionModalProps {
   tagGroups: { [groupName: string]: string[] };
   tagGroupOrder: string[];
   tagGroupColors: { [groupName: string]: { bg: string; text: string } };
-  editingTagInGroup: { groupName: string } | null;
+  tagGroupConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } };
+  editingTagInGroup: { groupName: string; groupId?: string } | null;
   newTagInGroupName: string;
   showTagGroupInput: boolean;
   newTagGroupName: string;
@@ -38,6 +39,7 @@ export function TagSelectionModal({
   tagGroups,
   tagGroupOrder,
   tagGroupColors,
+  tagGroupConfigs,
   editingTagInGroup,
   newTagInGroupName,
   showTagGroupInput,
@@ -83,24 +85,27 @@ export function TagSelectionModal({
 
           <ScrollView style={{ maxHeight: 400 }}>
             {/* All Tag Groups */}
-            {tagGroupOrder
-              .filter((groupName) => {
-                // Exclude Category for subtasks
-                if (editingTarget !== 'main' && groupName === 'Category') {
-                  return false;
-                }
-                return true;
-              })
-              .map((groupName) => {
-                const tags = tagGroups[groupName];
-                if (!tags) return null;
-                const groupConfig = TAG_GROUPS[groupName] || { isSingleSelect: false, allowAddTags: true };
-                const isSingleSelect = groupConfig.isSingleSelect;
-                const allowAddTags = groupConfig.allowAddTags;
-                const selectedTags = tempTags.tagGroups?.[groupName] || [];
-                const isSelected = isSingleSelect ? selectedTags.length > 0 && selectedTags[0] : null;
+            {tagGroupOrder.length === 0 ? (
+              <Text style={styles.modalLabel}>No tag groups available</Text>
+            ) : (
+              tagGroupOrder
+                .filter((groupName) => {
+                  // Exclude Category for subtasks
+                  if (editingTarget !== 'main' && groupName === 'Category') {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((groupName) => {
+                  const tags = tagGroups[groupName] || []; // Default to empty array instead of null
+                  const groupConfig = tagGroupConfigs[groupName] || { isSingleSelect: false, allowAddTags: true };
+                  const isSingleSelect = groupConfig.isSingleSelect;
+                  const allowAddTags = groupConfig.allowAddTags !== false; // Default to true if not set
+                  const selectedTags = tempTags.tagGroups?.[groupName] || [];
+                  const isSelected = isSingleSelect ? selectedTags.length > 0 && selectedTags[0] : null;
 
-                return (
+                  // Always show the group even if it has no tags
+                  return (
                   <View key={groupName}>
                     <Text style={styles.modalLabel}>{groupName}</Text>
                     <View style={styles.chipContainer}>
@@ -131,8 +136,9 @@ export function TagSelectionModal({
                           </TouchableOpacity>
                         );
                       })}
-                      {allowAddTags &&
-                        (editingTagInGroup?.groupName === groupName ? (
+                      {/* Show add tag button only if the group allows adding tags */}
+                      {allowAddTags && (
+                        editingTagInGroup?.groupName === groupName ? (
                           <View style={styles.newPlaceInputContainer}>
                             <TextInput
                               style={styles.newPlaceInput}
@@ -157,11 +163,13 @@ export function TagSelectionModal({
                           >
                             <Ionicons name="add" size={18} color="#666" />
                           </TouchableOpacity>
-                        ))}
+                        )
+                      )}
                     </View>
                   </View>
                 );
-              })}
+              })
+            )}
 
             {/* Add New Tag Group */}
             {showTagGroupInput ? (

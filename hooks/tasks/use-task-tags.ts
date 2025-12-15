@@ -1,29 +1,73 @@
 import { useState } from 'react';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { type TaskItem } from '@/types/tasks';
-import { TAG_GROUPS, DEFAULT_TAG_GROUP_ORDER, TAG_GROUP_COLORS } from '@/constants/task-tags';
 import { buildTaskTagsFromTask, buildTaskFieldsFromSelection } from '@/utils/tasks/task-tags';
+import { useTaskTagsData } from './use-task-tags-data';
+import { useTaskTagsTransformation } from './use-task-tags-transformation';
+import { useTaskTagsOperations } from './use-task-tags-operations';
 
 /**
  * Hook for managing tag modal state and tag editing logic for tasks screen
  */
-export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, field: keyof TaskItem, value: any) => Promise<void>, setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>) {
+export function useTaskTags(
+  tasks: TaskItem[],
+  updateTaskField: (id: string, field: keyof TaskItem, value: any) => Promise<void>,
+  setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>
+) {
+  // Data fetching
+  const {
+    dbTagGroups,
+    allTags,
+    categoriesFromTasks,
+    fetchTagGroups,
+    createDbTag,
+    createDbTagGroup,
+    setAllTags,
+  } = useTaskTagsData();
+
+  // Editing state
   const [editingTagTarget, setEditingTagTarget] = useState<'main' | string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [tempTags, setTempTags] = useState<TaskTags>({ tagGroups: {} });
-  const [tagGroups, setTagGroups] = useState<{ [groupName: string]: string[] }>(
-    Object.fromEntries(Object.entries(TAG_GROUPS).map(([name, data]) => [name, data.tags]))
+
+  // Tag groups display state
+  const [tagGroups, setTagGroups] = useState<{ [groupName: string]: string[] }>({});
+  const [tagGroupOrder, setTagGroupOrder] = useState<string[]>([]);
+  const [tagGroupColors, setTagGroupColors] = useState<{ [groupName: string]: { bg: string; text: string } }>({});
+  const [tagGroupConfigs, setTagGroupConfigs] = useState<{ [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } }>({});
+
+  // Transform database data into component-friendly format
+  useTaskTagsTransformation(
+    dbTagGroups,
+    allTags,
+    categoriesFromTasks,
+    setTagGroups,
+    setTagGroupOrder,
+    setTagGroupColors,
+    setTagGroupConfigs
   );
-  const [tagGroupOrder, setTagGroupOrder] = useState<string[]>(DEFAULT_TAG_GROUP_ORDER);
-  const [tagGroupColors, setTagGroupColors] = useState<{ [groupName: string]: { bg: string; text: string } }>(
-    Object.fromEntries(Object.entries(TAG_GROUPS).map(([name, data]) => [name, data.color]))
+
+  // Tag and tag group operations
+  const operations = useTaskTagsOperations(
+    dbTagGroups,
+    tagGroups,
+    tagGroupConfigs,
+    tagGroupColors,
+    tempTags,
+    setTempTags,
+    setTagGroups,
+    setTagGroupOrder,
+    setTagGroupColors,
+    setTagGroupConfigs,
+    setAllTags,
+    createDbTag,
+    createDbTagGroup,
+    fetchTagGroups
   );
-  const [showTagGroupInput, setShowTagGroupInput] = useState(false);
-  const [newTagGroupName, setNewTagGroupName] = useState('');
-  const [editingTagInGroup, setEditingTagInGroup] = useState<{ groupName: string } | null>(null);
-  const [newTagInGroupName, setNewTagInGroupName] = useState('');
 
   const openTagModalForTask = (taskId: string, isMainTask: boolean) => {
+    // Refetch tag groups and tags to ensure we have the latest data
+    fetchTagGroups();
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
@@ -37,114 +81,9 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
       setEditingTagTarget(taskId);
     }
     setEditingTaskId(taskId);
-    setShowTagGroupInput(false);
-    setNewTagGroupName('');
-    setEditingTagInGroup(null);
-    setNewTagInGroupName('');
-  };
-
-  const toggleTagInGroup = (groupName: string, tag: string) => {
-    const currentTagGroups = tempTags.tagGroups || {};
-    const groupTags = currentTagGroups[groupName] || [];
-    const groupConfig = TAG_GROUPS[groupName] || { isSingleSelect: false, allowAddTags: true };
-
-    let updatedGroupTags: string[];
-    if (groupConfig.isSingleSelect) {
-      updatedGroupTags = groupTags.includes(tag) ? [] : [tag];
-    } else {
-      updatedGroupTags = groupTags.includes(tag) ? groupTags.filter((t) => t !== tag) : [...groupTags, tag];
-    }
-
-    setTempTags({
-      ...tempTags,
-      tagGroups: {
-        ...currentTagGroups,
-        [groupName]: updatedGroupTags,
-      },
-    });
-  };
-
-  const handleAddTagToGroup = (groupName: string) => {
-    setEditingTagInGroup({ groupName });
-  };
-
-  const handleSaveTagToGroup = () => {
-    if (
-      editingTagInGroup &&
-      newTagInGroupName.trim() &&
-      !tagGroups[editingTagInGroup.groupName]?.includes(newTagInGroupName.trim())
-    ) {
-      const trimmedTag = newTagInGroupName.trim();
-      setTagGroups((prev) => ({
-        ...prev,
-        [editingTagInGroup.groupName]: [...(prev[editingTagInGroup.groupName] || []), trimmedTag],
-      }));
-
-      if (editingTagInGroup.groupName === 'Category') {
-        const currentTagGroups = tempTags.tagGroups || {};
-        const groupConfig = TAG_GROUPS['Category'] || { isSingleSelect: true };
-        if (groupConfig.isSingleSelect) {
-          setTempTags({
-            ...tempTags,
-            tagGroups: {
-              ...currentTagGroups,
-              Category: [trimmedTag],
-            },
-          });
-        }
-      }
-    }
-    setEditingTagInGroup(null);
-    setNewTagInGroupName('');
-  };
-
-  const handleAddNewTagGroup = () => {
-    setShowTagGroupInput(true);
-  };
-
-  const handleSaveNewTagGroup = () => {
-    const trimmedTagGroup = newTagGroupName.trim();
-    if (trimmedTagGroup && !tagGroups[trimmedTagGroup]) {
-      setTagGroups((prev) => ({
-        ...prev,
-        [trimmedTagGroup]: [],
-      }));
-      setTagGroupOrder((prev) => [...prev, trimmedTagGroup]);
-
-      const existingGroupNames = Object.keys(tagGroupColors);
-      const usedColorIndices = existingGroupNames
-        .map((name) =>
-          TAG_GROUP_COLORS.findIndex(
-            (c) => c.bg === tagGroupColors[name].bg && c.text === tagGroupColors[name].text
-          )
-        )
-        .filter((idx) => idx !== -1);
-
-      let colorIndex = 0;
-      for (let i = 0; i < TAG_GROUP_COLORS.length; i++) {
-        if (!usedColorIndices.includes(i)) {
-          colorIndex = i;
-          break;
-        }
-      }
-      const selectedColor = TAG_GROUP_COLORS[colorIndex % TAG_GROUP_COLORS.length];
-
-      setTagGroupColors((prev) => ({
-        ...prev,
-        [trimmedTagGroup]: selectedColor,
-      }));
-
-      const currentTagGroups = tempTags.tagGroups || {};
-      setTempTags({
-        ...tempTags,
-        tagGroups: {
-          ...currentTagGroups,
-          [trimmedTagGroup]: [],
-        },
-      });
-    }
-    setShowTagGroupInput(false);
-    setNewTagGroupName('');
+    // Reset operations state
+    operations.handleCancelTagGroup();
+    operations.handleCancelTagInGroup();
   };
 
   const saveTagsForTask = async () => {
@@ -194,25 +133,16 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
 
     setEditingTagTarget(null);
     setEditingTaskId(null);
-    setShowTagGroupInput(false);
-    setNewTagGroupName('');
-    setEditingTagInGroup(null);
-    setNewTagInGroupName('');
+    operations.setNewTagGroupName('');
+    operations.setNewTagInGroupName('');
+    if (operations.editingTagInGroup) {
+      operations.handleCancelTagInGroup();
+    }
   };
 
   const closeTagModal = () => {
     setEditingTagTarget(null);
     setEditingTaskId(null);
-  };
-
-  const handleCancelTagInGroup = () => {
-    setEditingTagInGroup(null);
-    setNewTagInGroupName('');
-  };
-
-  const handleCancelTagGroup = () => {
-    setShowTagGroupInput(false);
-    setNewTagGroupName('');
   };
 
   return {
@@ -223,22 +153,23 @@ export function useTaskTags(tasks: TaskItem[], updateTaskField: (id: string, fie
     tagGroups,
     tagGroupOrder,
     tagGroupColors,
-    showTagGroupInput,
-    newTagGroupName,
-    editingTagInGroup,
-    newTagInGroupName,
+    tagGroupConfigs,
+    showTagGroupInput: operations.showTagGroupInput,
+    newTagGroupName: operations.newTagGroupName,
+    editingTagInGroup: operations.editingTagInGroup,
+    newTagInGroupName: operations.newTagInGroupName,
     // Actions
     openTagModalForTask,
-    toggleTagInGroup,
-    handleAddTagToGroup,
-    handleSaveTagToGroup,
-    handleAddNewTagGroup,
-    handleSaveNewTagGroup,
+    toggleTagInGroup: operations.toggleTagInGroup,
+    handleAddTagToGroup: operations.handleAddTagToGroup,
+    handleSaveTagToGroup: operations.handleSaveTagToGroup,
+    handleAddNewTagGroup: operations.handleAddNewTagGroup,
+    handleSaveNewTagGroup: operations.handleSaveNewTagGroup,
     saveTagsForTask,
     closeTagModal,
-    handleCancelTagInGroup,
-    handleCancelTagGroup,
-    setNewTagInGroupName,
-    setNewTagGroupName,
+    handleCancelTagInGroup: operations.handleCancelTagInGroup,
+    handleCancelTagGroup: operations.handleCancelTagGroup,
+    setNewTagInGroupName: operations.setNewTagInGroupName,
+    setNewTagGroupName: operations.setNewTagGroupName,
   };
 }

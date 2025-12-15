@@ -8,7 +8,9 @@ export interface TagGroupResponse {
   id: string;
   name: string;
   type: string;
-  is_system: boolean;
+  is_single_select: boolean;
+  allow_add_tag: boolean; // Note: backend uses singular "allow_add_tag"
+  created_at: string;
 }
 
 /**
@@ -41,11 +43,24 @@ export function useTagGroups() {
     }
   }, []);
 
-  const createTagGroup = useCallback(async (name: string): Promise<TagGroupResponse | null> => {
+  const createTagGroup = useCallback(async (
+    name: string,
+    isSingleSelect?: boolean,
+    allowAddTags?: boolean
+  ): Promise<TagGroupResponse | null> => {
     setLoading(true);
     setError(null);
     try {
-      const newGroup = await post<TagGroupResponse>('/api/tasks/tag-groups', { name });
+      const payload: { name: string; is_single_select?: boolean; allow_add_tag?: boolean } = { name };
+      if (isSingleSelect !== undefined) {
+        payload.is_single_select = isSingleSelect;
+      }
+      if (allowAddTags !== undefined) {
+        payload.allow_add_tag = allowAddTags; // Backend uses singular "allow_add_tag"
+      }
+      console.log('[use-tag-groups] Creating tag group with payload:', payload);
+      const newGroup = await post<TagGroupResponse>('/api/tasks/tag-groups', payload);
+      console.log('[use-tag-groups] Tag group created successfully:', newGroup);
       setTagGroups((prev) => [...prev, newGroup]);
       return newGroup;
     } catch (err) {
@@ -54,7 +69,7 @@ export function useTagGroups() {
         errorMessage = err.message || errorMessage;
       }
       setError(errorMessage);
-      console.error('[Create Tag Group] Error:', err);
+      console.error('[use-tag-groups] Create Tag Group Error:', err);
       return null;
     } finally {
       setLoading(false);

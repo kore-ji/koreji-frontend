@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, Pressable, View, Text } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, Pressable, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskMode, TaskPlace, TaskTool } from '@/constants/task-filters';
+import { useRecordFilters } from '@/hooks/use-record-filters';
 import { HOME_SCREEN_STRINGS } from '@/constants/strings/home';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
+
+const NO_SELECT = 'No select';
 
 export default function HomeScreen() {
   const {
@@ -16,9 +18,11 @@ export default function HomeScreen() {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(20);
 
-  const [selectedMode, setSelectedMode] = useState<TaskMode>(TaskMode.NO_SELECT);
-  const [selectedPlace, setSelectedPlace] = useState<TaskPlace>(TaskPlace.NO_SELECT);
-  const [selectedTool, setSelectedTool] = useState<TaskTool[]>([TaskTool.NO_SELECT]);
+  const { modes, places, tools, loading: filtersLoading } = useRecordFilters();
+
+  const [selectedMode, setSelectedMode] = useState<string>(NO_SELECT);
+  const [selectedPlace, setSelectedPlace] = useState<string>(NO_SELECT);
+  const [selectedTool, setSelectedTool] = useState<string[]>([NO_SELECT]);
   const [customPlace, setCustomPlace] = useState<string>('');
 
   const formatTime = (value: number): string => {
@@ -67,9 +71,9 @@ export default function HomeScreen() {
   const handleRecommend = () => {
     // Placeholder for recommendation logic
     const MAX_PLACE_LENGTH = 30;
-    let placeValue: string | TaskPlace = selectedPlace;
+    let placeValue: string = selectedPlace;
     
-    if (selectedPlace === TaskPlace.OTHER && customPlace.trim()) {
+    if (selectedPlace === 'Other' && customPlace.trim()) {
       // Validate and limit the custom place value before using it
       const trimmedPlace = customPlace.trim();
       if (trimmedPlace.length > MAX_PLACE_LENGTH) {
@@ -87,6 +91,11 @@ export default function HomeScreen() {
       tools: selectedTool.join(', '),
     });
   };
+
+  // Prepare options with "No select" option
+  const modeOptions = [NO_SELECT, ...modes];
+  const placeOptions = [NO_SELECT, ...places, 'Other'];
+  const toolOptions = [NO_SELECT, ...tools];
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -167,29 +176,35 @@ export default function HomeScreen() {
         </View>
 
         {/* Filter Tags Section */}
-        <View style={styles.filtersContainer}>
-          <FilterDropdown
-            label={filters.placeLabel}
-            selectedValue={selectedPlace}
-            options={Object.values(TaskPlace)}
-            onSelect={(value) => setSelectedPlace(value as TaskPlace)}
-            otherOptionValue={customPlace}
-            onOtherValueChange={setCustomPlace}
-          />
-          <FilterDropdown
-            label={filters.modeLabel}
-            selectedValue={selectedMode}
-            options={Object.values(TaskMode)}
-            onSelect={(value) => setSelectedMode(value as TaskMode)}
-          />
-          <FilterDropdown
-            label={filters.toolLabel}
-            selectedValue={selectedTool}
-            options={Object.values(TaskTool)}
-            onSelect={(value) => setSelectedTool(value as TaskTool[])}
-            multiple
-          />
-        </View>
+        {filtersLoading ? (
+          <View style={styles.filtersContainer}>
+            <ActivityIndicator size="small" color="#333333" />
+          </View>
+        ) : (
+          <View style={styles.filtersContainer}>
+            <FilterDropdown
+              label={filters.placeLabel}
+              selectedValue={selectedPlace}
+              options={placeOptions}
+              onSelect={(value) => setSelectedPlace(value as string)}
+              otherOptionValue={customPlace}
+              onOtherValueChange={setCustomPlace}
+            />
+            <FilterDropdown
+              label={filters.modeLabel}
+              selectedValue={selectedMode}
+              options={modeOptions}
+              onSelect={(value) => setSelectedMode(value as string)}
+            />
+            <FilterDropdown
+              label={filters.toolLabel}
+              selectedValue={selectedTool}
+              options={toolOptions}
+              onSelect={(value) => setSelectedTool(value as string[])}
+              multiple
+            />
+          </View>
+        )}
 
         {/* Main Action Button */}
         <TouchableOpacity
