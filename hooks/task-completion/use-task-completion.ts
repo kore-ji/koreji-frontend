@@ -17,15 +17,17 @@ const getDummyTask = (taskId?: string): ApiTaskResponse => ({
 });
 
 interface UseTaskCompletionParams {
-  taskId?: string;
+  task_id?: string;
   progressPercent?: string;
   elapsedTime?: string;
 }
 
-export function useTaskCompletion({ taskId, progressPercent, elapsedTime }: UseTaskCompletionParams) {
+export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: UseTaskCompletionParams) {
   const router = useRouter();
   const { task, loading, error, fetchTask, setTask } = useTask();
   const [currentPage, setCurrentPage] = useState(0); // 0 = completion page, 1 = time spent page
+
+  const taskId = task_id;
 
   const progress = progressPercent ? parseInt(progressPercent, 10) : 9;
   const elapsedSeconds = elapsedTime ? parseInt(elapsedTime, 10) : 600; // Default to 10 minutes (600 seconds)

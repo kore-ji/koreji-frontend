@@ -73,7 +73,7 @@ export function TaskItemComponent({
   const hasSubtasks = item.subtasks.length > 0;
 
   const handleTaskPress = () => {
-    router.push(`/add-task?taskId=${item.id}`);
+    router.push(`/add-task?task_id=${item.id}`);
   };
 
   return (

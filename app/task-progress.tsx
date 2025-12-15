@@ -23,8 +23,16 @@ const getDummyTask = (taskId?: string): ApiTaskResponse => ({
 
 export default function TaskProgressScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ taskId?: string }>();
-  const { taskId } = params;
+  const params = useLocalSearchParams<{
+    task_id?: string;
+    mode?: string;
+    place?: string;
+    tool?: string;
+    time?: string;
+  }>();
+
+  // Use snake_case task_id consistently for route params
+  const taskId = params.task_id;
   
   const timer = useTaskTimer();
   const { task, loading, error, fetchTask, setTask } = useTask();
@@ -72,7 +80,7 @@ export default function TaskProgressScreen() {
     timer.stop();
     // Navigate to completion page with taskId and elapsed time
     router.push(
-      `/task-completion?taskId=${taskId}&elapsedTime=${timer.elapsedSeconds}&progressPercent=${progressPercent}`
+      `/task-completion?task_id=${taskId}&elapsedTime=${timer.elapsedSeconds}&progressPercent=${progressPercent}`
     );
   };
 

@@ -20,8 +20,8 @@ import { addTaskStyles } from '@/styles/add-task.styles';
 
 export default function AddTaskScreen() {
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ taskId?: string }>();
-  const isEditMode = !!params.taskId;
+  const params = useLocalSearchParams<{ task_id?: string }>();
+  const isEditMode = !!params.task_id;
 
   // Main task form state
   const {
@@ -85,7 +85,7 @@ export default function AddTaskScreen() {
   // Load task data in edit mode
   const { isLoading } = useAddTaskData(
     isEditMode,
-    params.taskId,
+    params.task_id,
     setMainTitle,
     setMainDesc,
     setMainTime,
@@ -98,7 +98,7 @@ export default function AddTaskScreen() {
   // Form submission
   const { isSubmitting, handleSubmit: handleSubmitBase } = useAddTaskSubmit(
     isEditMode,
-    params.taskId,
+    params.task_id,
     mainTitle,
     mainDesc,
     mainTime,
