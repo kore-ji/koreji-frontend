@@ -37,6 +37,11 @@ export function useTaskTimer(): UseTaskTimerReturn {
       if (startTimeRef.current !== null) {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
         setElapsedSeconds(elapsed);
+
+        // Log every full minute to verify timer is working
+        if (elapsed > 0 && elapsed % 60 === 0) {
+          console.log('[TaskTimer] Elapsed minutes:', elapsed / 60);
+        }
       }
     }, 1000);
   }, [isRunning, clearTimerInterval]);

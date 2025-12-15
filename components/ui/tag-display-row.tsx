@@ -58,11 +58,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         flexWrap: 'wrap',
+        maxWidth: '100%',
+        flexShrink: 1,
     },
     tagRow: {
         flexDirection: 'row',
         gap: 6,
         flexWrap: 'wrap',
+        maxWidth: '100%',
+        flexShrink: 1,
     },
     addTagBtn: {
         width: 22,

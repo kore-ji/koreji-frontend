@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface SubtaskHeaderProps {
@@ -7,6 +7,7 @@ interface SubtaskHeaderProps {
   addSubtaskButtonText: string;
   onAIGenerate: () => void;
   onAddSubtask: () => void;
+  aiLoading?: boolean;
 }
 
 export function SubtaskHeader({
@@ -15,13 +16,22 @@ export function SubtaskHeader({
   addSubtaskButtonText,
   onAIGenerate,
   onAddSubtask,
+  aiLoading = false,
 }: SubtaskHeaderProps) {
   return (
     <View style={styles.subtaskHeader}>
       <Text style={styles.sectionTitle}>{sectionTitle}</Text>
       <View style={styles.headerActions}>
-        <TouchableOpacity style={styles.aiButton} onPress={onAIGenerate}>
-          <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 4 }} />
+        <TouchableOpacity
+          style={[styles.aiButton, aiLoading && styles.aiButtonDisabled]}
+          onPress={onAIGenerate}
+          disabled={aiLoading}
+        >
+          {aiLoading ? (
+            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
+          ) : (
+            <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 4 }} />
+          )}
           <Text style={styles.aiButtonText}>{aiGenerateButtonText}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onAddSubtask} style={styles.addSubtaskButton}>
@@ -73,10 +83,12 @@ const styles = StyleSheet.create({
     boxShadow: '0px 2px 3px 0px rgba(156, 39, 176, 0.3)',
     flexShrink: 0,
   },
+  aiButtonDisabled: {
+    opacity: 0.7,
+  },
   aiButtonText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
   },
 });
-

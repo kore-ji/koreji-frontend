@@ -5,6 +5,9 @@ import { buildTaskTagsFromTask, buildTaskFieldsFromSelection } from '@/utils/tas
 import { useTaskTagsData } from './use-task-tags-data';
 import { useTaskTagsTransformation } from './use-task-tags-transformation';
 import { useTaskTagsOperations } from './use-task-tags-operations';
+import { patch } from '@/services/api/client';
+import type { TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
+import type { TagResponse } from '@/hooks/tasks/use-tags';
 
 /**
  * Hook for managing tag modal state and tag editing logic for tasks screen
@@ -93,14 +96,55 @@ export function useTaskTags(
     }
 
     const includeCategory = editingTagTarget === 'main';
-    const selection = includeCategory
+    const selection: TaskTags = includeCategory
       ? tempTags
       : (() => {
           const { Category, ...rest } = tempTags.tagGroups || {};
           return { tagGroups: rest };
         })();
 
-    const { categoryValue, nextTags } = buildTaskFieldsFromSelection(selection, includeCategory);
+    const { categoryValue, priorityValue, nextTags } = buildTaskFieldsFromSelection(selection, includeCategory);
+
+    // Build backend tag_ids from the current selection (excluding Category which is stored on the task itself)
+    const buildTagIdsFromSelection = (
+      selectionForBackend: TaskTags,
+      groups: TagGroupResponse[],
+      tags: TagResponse[]
+    ): string[] => {
+      const groupsMap = new Map<string, TagGroupResponse>();
+      groups.forEach((g) => {
+        groupsMap.set(g.name, g);
+      });
+
+      const tagsByGroupId = new Map<string, TagResponse[]>();
+      tags.forEach((t) => {
+        const list = tagsByGroupId.get(t.tag_group_id) || [];
+        list.push(t);
+        tagsByGroupId.set(t.tag_group_id, list);
+      });
+
+      const selectionGroups = selectionForBackend.tagGroups || {};
+      const resultIds: string[] = [];
+
+      Object.entries(selectionGroups).forEach(([groupName, names]) => {
+        if (groupName === 'Category') {
+          // Category is stored on task.category, not in the tags relation
+          return;
+        }
+        const group = groupsMap.get(groupName);
+        if (!group) return;
+
+        const groupTags = tagsByGroupId.get(group.id) || [];
+        (names || []).forEach((name) => {
+          const match = groupTags.find((t) => t.name === name);
+          if (match && !resultIds.includes(match.id)) {
+            resultIds.push(match.id);
+          }
+        });
+      });
+
+      return resultIds;
+    };
 
     const currentTask = tasks.find((t) => t.id === editingTaskId);
     if (currentTask) {
@@ -110,6 +154,25 @@ export function useTaskTags(
       if (includeCategory && categoryValue !== currentTask.category) {
         await updateTaskField(editingTaskId, 'category', categoryValue || null);
       }
+      // Update priority in backend if it changed
+      if (priorityValue !== currentTask.priority) {
+        await updateTaskField(editingTaskId, 'priority', priorityValue || null);
+      }
+    }
+
+    // Persist tags to backend for both tasks and subtasks via PATCH on task/subtask endpoints
+    try {
+      const tagIds = buildTagIdsFromSelection(selection, dbTagGroups, allTags);
+      const isMainTaskTarget = editingTagTarget === 'main';
+      const endpoint = isMainTaskTarget
+        ? `/api/tasks/${editingTaskId}`
+        : `/api/tasks/subtasks/${editingTaskId}`;
+
+      // Even if no tags are selected, call backend to clear any existing tags
+      await patch(endpoint, { tag_ids: tagIds });
+    } catch (err) {
+      console.error('[useTaskTags] Failed to sync tags to backend:', err);
+      // Continue and still update local state so UI does not get stuck
     }
 
     // Update local state
@@ -121,12 +184,12 @@ export function useTaskTags(
           tags: {
             ...t.tags,
             ...nextTags,
-            tools: nextTags.tools || [],
           },
         };
         if (includeCategory) {
           nextTask.category = categoryValue || t.category;
         }
+        nextTask.priority = priorityValue ?? t.priority ?? null;
         return nextTask;
       })
     );

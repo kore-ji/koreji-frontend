@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { post, patch, ApiClientError } from '@/services/api/client';
+import { post, patch, ApiClientError, get } from '@/services/api/client';
 import { type LocalSubTask } from '@/types/add-task';
 import { type TaskStatus } from '@/types/task-status';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
 import { buildMainTaskPayload, buildSubtaskPayload, isExistingSubtask } from '@/utils/add-task/task-payload';
 import { calculateTotalTime } from '@/utils/add-task/time-calculation';
+import type { TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
+import type { TagResponse } from '@/hooks/tasks/use-tags';
+import type { TaskTags } from '@/components/ui/tag-display-row';
 
 /**
  * Hook for handling form submission (create/update task)
@@ -49,28 +52,87 @@ export function useAddTaskSubmit(
       console.log('[useAddTaskSubmit] Task payload built:', mainTaskPayload);
       console.log('[useAddTaskSubmit] Subtasks count:', subtasks.length);
 
+      // Fetch tag metadata once so we can translate selected tag names into tag_ids
+      const tagGroups = await get<TagGroupResponse[]>('/api/tasks/tag-groups');
+      const allTags: TagResponse[] = [];
+
+      for (const group of tagGroups) {
+        try {
+          const groupTags = await get<TagResponse[]>(`/api/tasks/tag-groups/${group.id}/tags`);
+          if (Array.isArray(groupTags)) {
+            allTags.push(...groupTags);
+          }
+        } catch (err) {
+          console.error(`[useAddTaskSubmit] Failed to fetch tags for group ${group.id}:`, err);
+        }
+      }
+
+      const buildTagIdsFromSelection = (selection: TaskTags | undefined): string[] => {
+        if (!selection) return [];
+        const selectionGroups = selection.tagGroups || {};
+        const groupsMap = new Map<string, TagGroupResponse>();
+        tagGroups.forEach((g) => {
+          groupsMap.set(g.name, g);
+        });
+
+        const tagsByGroupId = new Map<string, TagResponse[]>();
+        allTags.forEach((t) => {
+          const list = tagsByGroupId.get(t.tag_group_id) || [];
+          list.push(t);
+          tagsByGroupId.set(t.tag_group_id, list);
+        });
+
+        const resultIds: string[] = [];
+
+        Object.entries(selectionGroups).forEach(([groupName, names]) => {
+          if (groupName === 'Category') {
+            // Category is stored on task.category, not in the tags relation
+            return;
+          }
+          const group = groupsMap.get(groupName);
+          if (!group) return;
+
+          const groupTags = tagsByGroupId.get(group.id) || [];
+          (names || []).forEach((name) => {
+            const match = groupTags.find((t) => t.name === name);
+            if (match && !resultIds.includes(match.id)) {
+              resultIds.push(match.id);
+            }
+          });
+        });
+
+        return resultIds;
+      };
+
+      // Attach tag_ids for main task based on selected tags in non-special groups.
+      // Category and Priority are mapped to dedicated fields, not tag_ids.
+      const mainSelection = mainTags as TaskTags | undefined;
+      const mainGroups = mainSelection?.tagGroups || {};
+      const { Category, Priority, ...restMainGroups } = mainGroups;
+      (mainTaskPayload as any).tag_ids = buildTagIdsFromSelection({ tagGroups: restMainGroups } as TaskTags);
+
       if (isEditMode && taskId) {
         // Update existing task
         console.log(`[useAddTaskSubmit] Updating existing task (ID: ${taskId}) to backend`);
         await patch(`/api/tasks/${taskId}`, mainTaskPayload);
         console.log('[useAddTaskSubmit] Task updated successfully');
 
-        // Update subtasks
+        // Update subtasks (including tag_ids)
         if (subtasks.length > 0) {
           console.log(`[useAddTaskSubmit] Updating ${subtasks.length} subtasks to backend`);
           const subtaskPromises = subtasks.map(async (sub) => {
             const subtaskPayload = buildSubtaskPayload(sub);
+            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(sub.tags);
             console.log(`[useAddTaskSubmit] Subtask payload for ${sub.id}:`, subtaskPayload);
 
-            // Check if subtask exists (has UUID format) or is new
             if (isExistingSubtask(sub.id)) {
               // Update existing subtask
               console.log(`[useAddTaskSubmit] Updating existing subtask (ID: ${sub.id})`);
-              return patch(`/api/tasks/subtasks/${sub.id}`, subtaskPayload);
+              await patch(`/api/tasks/subtasks/${sub.id}`, subtaskPayload);
             } else {
               // Create new subtask
               console.log(`[useAddTaskSubmit] Creating new subtask (temp ID: ${sub.id}) for task ${taskId}`);
-              return post('/api/tasks/subtasks', {
+              const created = await post<{ id: string; [key: string]: unknown }>('/api/tasks/subtasks', {
                 ...subtaskPayload,
                 task_id: taskId,
               });
@@ -87,13 +149,14 @@ export function useAddTaskSubmit(
         const mainTaskId = mainTaskResponse.id;
         console.log('[useAddTaskSubmit] Task created successfully with ID:', mainTaskId);
 
-        // Create subtasks if any
+        // Create subtasks if any (including tag_ids)
         if (subtasks.length > 0) {
           console.log(`[useAddTaskSubmit] Creating ${subtasks.length} subtasks in backend`);
           const subtaskPromises = subtasks.map(async (sub) => {
             const subtaskPayload = buildSubtaskPayload(sub, mainTaskId);
-            console.log(`[useAddTaskSubmit] Creating subtask:`, subtaskPayload);
-            return post('/api/tasks/subtasks', subtaskPayload);
+            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(sub.tags);
+            console.log('[useAddTaskSubmit] Creating subtask:', subtaskPayload);
+            await post<{ id: string; [key: string]: unknown }>('/api/tasks/subtasks', subtaskPayload);
           });
 
           await Promise.all(subtaskPromises);

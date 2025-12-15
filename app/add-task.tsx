@@ -1,9 +1,8 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { View, ScrollView, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { type TaskStatus } from '@/types/task-status';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
-import { formatDate } from '@/utils/formatting/date';
 import { MainTaskCard } from '@/components/add-task/main-task-card';
 import { SubtaskCard } from '@/components/add-task/subtask-card';
 import { SubtaskHeader } from '@/components/add-task/subtask-header';
@@ -17,11 +16,20 @@ import { useAddTaskData } from '@/hooks/add-task/use-add-task-data';
 import { useAddTaskSubmit } from '@/hooks/add-task/use-add-task-submit';
 import { calculateTotalTime, isTimeReadOnly } from '@/utils/add-task/time-calculation';
 import { addTaskStyles } from '@/styles/add-task.styles';
+import { useGenerateSubtasks } from '@/hooks/tasks/use-generate-subtasks';
+import type { LocalSubTask } from '@/types/add-task';
+import { buildMainTaskPayload } from '@/utils/add-task/task-payload';
+import { post } from '@/services/api/client';
+import { SubtasksLoadingOverlay } from '@/components/add-task/subtasks-loading-overlay';
+import { formatDate } from '@/utils/formatting/date';
 
 export default function AddTaskScreen() {
   const navigation = useNavigation();
-  const params = useLocalSearchParams<{ taskId?: string }>();
-  const isEditMode = !!params.taskId;
+  const params = useLocalSearchParams<{ task_id?: string }>();
+  const [effectiveTaskId, setEffectiveTaskId] = useState<string | undefined>(
+    typeof params.task_id === 'string' && params.task_id ? params.task_id : undefined
+  );
+  const isEditMode = !!effectiveTaskId;
 
   // Main task form state
   const {
@@ -79,13 +87,12 @@ export default function AddTaskScreen() {
     closeTagModal,
     setNewTagInGroupName,
     setNewTagGroupName,
-    savePendingTagGroupsAndTags,
   } = useAddTaskTags(mainTags, subtasks);
 
   // Load task data in edit mode
   const { isLoading } = useAddTaskData(
     isEditMode,
-    params.taskId,
+    effectiveTaskId,
     setMainTitle,
     setMainDesc,
     setMainTime,
@@ -98,7 +105,7 @@ export default function AddTaskScreen() {
   // Form submission
   const { isSubmitting, handleSubmit: handleSubmitBase } = useAddTaskSubmit(
     isEditMode,
-    params.taskId,
+    effectiveTaskId,
     mainTitle,
     mainDesc,
     mainTime,
@@ -107,6 +114,13 @@ export default function AddTaskScreen() {
     mainTags,
     subtasks
   );
+
+  // AI Generate subtasks hook
+  const {
+    generateSubtasks,
+    loading: isAIGenerating,
+    error: aiError,
+  } = useGenerateSubtasks();
 
   // Task submit handler (tag groups/tags are already saved when modal Confirm is clicked)
   const handleSubmit = async () => {
@@ -216,8 +230,54 @@ export default function AddTaskScreen() {
     console.log('[DEBUG] showDatePicker state changed:', showDatePicker);
   }, [showDatePicker]);
 
-  // AI Generate Logic (Placeholder)
-  const handleAIGenerate = () => {
+  /**
+   * Ensure there is a backend task ID we can use for AI generation.
+   * If we're still in "create" mode (no task_id yet), create a minimal
+   * task first to obtain a UUID, then switch this screen into edit mode.
+   */
+  const ensureTaskIdForAI = async (): Promise<string | null> => {
+    if (effectiveTaskId) {
+      return effectiveTaskId;
+    }
+
+    try {
+      const calculatedTotalTimeValue = calculateTotalTime(subtasks, mainTime);
+      const mainTaskPayload = buildMainTaskPayload(
+        mainTitle,
+        mainDesc,
+        mainDeadline,
+        mainStatus,
+        String(calculatedTotalTimeValue),
+        mainTags
+      );
+
+      console.log('[AI Generate] Creating temporary task for AI subtasks:', mainTaskPayload);
+
+      // Use the same API client as normal creation (respects EXPO_PUBLIC_API_BASE_URL)
+      const data = await post<{ id: string; [key: string]: unknown }>('/api/tasks/', mainTaskPayload);
+      if (!data || typeof data.id !== 'string') {
+        throw new Error('Backend did not return an id for created task');
+      }
+
+      setEffectiveTaskId(data.id);
+      console.log('[AI Generate] Temporary task created with id:', data.id);
+      return data.id;
+    } catch (error) {
+      console.error('[AI Generate] Error while creating temporary task for AI:', error);
+      Alert.alert(
+        TASK_SCREEN_STRINGS.addTask.alerts.errorTitle,
+        'Failed to create task for AI generation. Please try again.'
+      );
+      return null;
+    }
+  };
+
+  // AI Generate Logic (connected to backend)
+  const handleAIGenerate = async () => {
+    if (isAIGenerating) {
+      return;
+    }
+
     if (!mainTitle.trim()) {
       Alert.alert(
         TASK_SCREEN_STRINGS.addTask.alerts.aiGenerateTitle,
@@ -226,17 +286,56 @@ export default function AddTaskScreen() {
       return;
     }
 
-    // Log time and deadline information if provided before AI generate
-    console.log('[AI Generate] Task information provided before AI generate:', {
-      title: mainTitle.trim(),
-      time: parseInt(mainTime) || 0,
-      deadline: mainDeadline ? formatDate(mainDeadline) : null,
-    });
+    // Ensure we have a backend task ID (create a temporary one if needed)
+    const taskId = await ensureTaskIdForAI();
+    if (!taskId) {
+      return;
+    }
 
-    Alert.alert(
-      TASK_SCREEN_STRINGS.addTask.alerts.aiGenerateAlertTitle,
-      TASK_SCREEN_STRINGS.addTask.alerts.aiGeneratePlaceholder
-    );
+    try {
+      console.log('[AI Generate] Requesting AI-generated subtasks for task:', taskId);
+      const generated = await generateSubtasks(taskId);
+
+      if (!generated || generated.length === 0) {
+        const message =
+          aiError ??
+          'No subtasks were generated. Please try again after adjusting your task details.';
+        Alert.alert(
+          TASK_SCREEN_STRINGS.addTask.alerts.aiGenerateAlertTitle,
+          message
+        );
+        return;
+      }
+
+      // Only keep direct subtasks of this task
+      const directChildren = generated.filter((item) => item.parentId === taskId);
+
+      const mappedSubtasks: LocalSubTask[] = directChildren.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        estimatedTime: String(item.estimatedTime ?? 0),
+        deadline: item.deadline ?? null,
+        status: item.status as TaskStatus,
+        // Map TaskItem.tags (Record<groupName, string[]>) into TaskTags
+        // so subtasks immediately show their generated tags.
+        tags: {
+          tagGroups: item.tags ?? {},
+        },
+      }));
+
+      setSubtasks(mappedSubtasks);
+      console.log('[AI Generate] Subtasks updated from AI-generated results:', mappedSubtasks);
+    } catch (error) {
+      console.error('[AI Generate] Failed to generate subtasks:', error);
+      const message =
+        aiError ??
+        TASK_SCREEN_STRINGS.addTask.alerts.aiGeneratePlaceholder;
+      Alert.alert(
+        TASK_SCREEN_STRINGS.addTask.alerts.aiGenerateAlertTitle,
+        message
+      );
+    }
   };
 
   // Tag save handler wrapper
@@ -292,6 +391,7 @@ export default function AddTaskScreen() {
           addSubtaskButtonText={TASK_SCREEN_STRINGS.addTask.addSubtaskButton}
           onAIGenerate={handleAIGenerate}
           onAddSubtask={addSubtask}
+          aiLoading={isAIGenerating}
         />
 
         {/* Subtask List */}
@@ -396,6 +496,12 @@ export default function AddTaskScreen() {
         onCancelTagGroup={handleCancelTagGroup}
         onNewTagGroupNameChange={setNewTagGroupName}
         onSave={saveTags}
+      />
+
+      {/* Global AI subtasks loading overlay (center of screen) */}
+      <SubtasksLoadingOverlay
+        visible={isAIGenerating}
+        message={TASK_SCREEN_STRINGS.addTask.aiGenerateLoadingMessage}
       />
     </View>
   );

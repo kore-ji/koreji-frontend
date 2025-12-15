@@ -42,6 +42,7 @@ const TASK_SCREEN_STRINGS = {
     addSubtaskButton: '+ Add Subtask',
     aiGenerateButton: 'AI Generate',
     confirmButton: 'Confirm',
+    aiGenerateLoadingMessage: 'Generating subtasks with AI...',
     
     // Modal
     selectTagsTitle: 'Select Tags',

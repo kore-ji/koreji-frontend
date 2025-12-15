@@ -22,6 +22,18 @@ export interface ApiTaskResponse {
   status: BackendTaskStatus;
   estimated_minutes?: number | null;
   due_date?: string | null;
+   tags?: {
+    id: string;
+    name: string;
+    tag_group_id: string;
+    is_system: boolean;
+    created_at: string;
+    /**
+     * Human-readable tag group name from backend (`Tag.group.name`),
+     * e.g. "Tools", "Mode", "Location".
+     */
+    group_name: string;
+  }[];
   subtasks?: ApiTaskResponse[];
 }
 

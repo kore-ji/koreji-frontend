@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Task } from '@/components/task-recommend/task-card';
 import { TaskList } from '@/components/task-recommend/task-list';
 import { TaskRecommendHeader } from '@/components/task-recommend/task-recommend-header';
@@ -43,8 +43,20 @@ const BREAKPOINT_TABLET = 768;
 
 export default function TaskRecommendScreen() {
   const router = useRouter();
-  const totalMinutes = DUMMY_TASKS.reduce((sum, task) => sum + task.duration, 0);
+  const params = useLocalSearchParams<{
+    time?: string;
+    mode?: string;
+    place?: string;
+    tools?: string;
+  }>();
+
+  const totalMinutes =
+    typeof params.time === 'string' && params.time
+      ? Number(params.time)
+      : DUMMY_TASKS.reduce((sum, task) => sum + task.duration, 0);
+
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const [tasks] = useState<Task[]>(DUMMY_TASKS);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(DUMMY_TASKS[0]?.id || null);
 
   useEffect(() => {
@@ -68,10 +80,10 @@ export default function TaskRecommendScreen() {
   const availableWidth = screenWidth - containerPadding;
   const cardWidth = (availableWidth - (gapSize * (columns - 1))) / columns;
 
-  const handleStartTask = () => {
+  const handleStartTask = async () => {
     if (!selectedTaskId) return;
     
-    const selectedTask = DUMMY_TASKS.find((task) => task.id === selectedTaskId);
+    const selectedTask = tasks.find((task) => task.id === selectedTaskId);
     if (selectedTask) {
       console.log('Start task pressed - Selected task info:', {
         id: selectedTask.id,
@@ -80,11 +92,19 @@ export default function TaskRecommendScreen() {
         source: selectedTask.source,
         status: selectedTask.status,
       });
-      
-      // Navigate to task progress page with task data
-      router.push(
-        `/task-progress?taskId=${selectedTask.id}`
-      );
+
+      router.push({
+        pathname: '/task-progress',
+        params: {
+          task_id: selectedTask.id,
+          task_title: selectedTask.title,
+          task_duration: String(selectedTask.duration),
+          mode: params.mode,
+          place: params.place ?? 'task_recommend',
+          tool: params.tools ?? 'mobile_app',
+          time: params.time,
+        },
+      });
     }
   };
 
@@ -102,7 +122,7 @@ export default function TaskRecommendScreen() {
           <TaskRecommendHeader />
           <TaskRecommendDescription totalMinutes={totalMinutes} />
           <TaskList 
-            tasks={DUMMY_TASKS} 
+            tasks={tasks} 
             columns={columns} 
             cardWidth={cardWidth}
             selectedTaskId={selectedTaskId}

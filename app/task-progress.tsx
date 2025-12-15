@@ -1,52 +1,35 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTask } from '@/hooks/tasks/use-task';
 import { useTaskTimer } from '@/hooks/task-progress/use-task-timer';
 import { TASK_PROGRESS_STRINGS } from '@/constants/strings/task-progress';
-import type { ApiTaskResponse } from '@/types/tasks';
-
-// TEMPORARY: Dummy data for display
-const getDummyTask = (taskId?: string): ApiTaskResponse => ({
-  id: taskId || 'dummy-task-id',
-  parent_id: null,
-  title: 'Complete Project Documentation',
-  description: 'Write comprehensive documentation for the project including API endpoints, database schema, and user guides.',
-  category: 'Work',
-  status: 'in_progress',
-  estimated_minutes: 120,
-  due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  tags: [],
-});
+import { DOG_IMAGES } from '@/constants/images';
+import { post } from '@/services/api/client';
 
 export default function TaskProgressScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ taskId?: string }>();
-  const { taskId } = params;
-  
+  const params = useLocalSearchParams<{
+    task_id?: string;
+    task_title?: string;
+    task_duration?: string;
+    mode?: string;
+    place?: string;
+    tool?: string;
+    time?: string;
+  }>();
+
+  // Use snake_case task_id consistently for route params
+  const taskId = params.task_id;
+
   const timer = useTaskTimer();
-  const { task, loading, error, fetchTask, setTask } = useTask();
   const [progressPercent] = useState(9); // Placeholder, should fetch from backend
 
-  // Fetch task data
-  useEffect(() => {
-    if (taskId) {
-      fetchTask(taskId);
-    } else {
-      // TEMPORARY: Use dummy data if no taskId
-      setTask(getDummyTask(taskId));
-    }
-  }, [taskId, fetchTask, setTask]);
-
-  // Handle error by redirecting back
-  useEffect(() => {
-    if (error) {
-      console.error('[Task Progress] Failed to load task:', error);
-      router.back();
-    }
-  }, [error, router]);
+  const selectedImage = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
+    return DOG_IMAGES[randomIndex];
+  }, []);
 
   // Start timer automatically when page loads (user already clicked "Start Task")
   useEffect(() => {
@@ -57,8 +40,11 @@ export default function TaskProgressScreen() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const taskTitle = task?.title || '';
-  const durationMinutes = task?.estimated_minutes || 0;
+  const taskTitle = params.task_title || '';
+  // Prefer scheduled time from params; fallback to task_duration if needed
+  const durationMinutes =
+    (typeof params.time === 'string' && params.time ? Number(params.time) : undefined) ??
+    (typeof params.task_duration === 'string' && params.task_duration ? Number(params.task_duration) : Number.NaN);
 
   const handlePause = () => {
     if (timer.isRunning) {
@@ -68,12 +54,42 @@ export default function TaskProgressScreen() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // Capture elapsed time from timer before stopping
+    const elapsedSeconds = timer.elapsedSeconds;
     timer.stop();
-    // Navigate to completion page with taskId and elapsed time
-    router.push(
-      `/task-completion?taskId=${taskId}&elapsedTime=${timer.elapsedSeconds}&progressPercent=${progressPercent}`
-    );
+    
+    // Try to create a record, but always navigate to completion page even on failure
+    try {
+      if (taskId) {
+        const toolsArray =
+          typeof params.tool === 'string' && params.tool
+            ? params.tool.split(',').map((t) => t.trim()).filter(Boolean)
+            : [];
+
+        await post('/api/records', {
+          task_id: taskId,
+          mode: params.mode ?? '',
+          place: params.place ?? '',
+          tool: toolsArray,
+          occurred_at: new Date().toISOString(),
+        });
+      } else {
+        console.error('[Task Progress] Cannot create record: missing task_id');
+      }
+    } catch (error) {
+      console.error('[Task Progress] Failed to create record on completion', error);
+    } finally {
+      // Navigate to completion page with taskId and elapsed time from timer, even if record creation failed
+      router.push({
+        pathname: '/task-completion',
+        params: {
+          task_id: taskId ?? '',
+          elapsedTime: String(elapsedSeconds),
+          progressPercent: String(progressPercent),
+        },
+      });
+    }
   };
 
   const handleClose = () => {
@@ -91,48 +107,77 @@ export default function TaskProgressScreen() {
       </View>
 
       {/* Content */}
-      {loading && taskId ? (
-        <View style={styles.content}>
-          <ActivityIndicator size="large" color="#333333" />
+      {timer.isPaused ? (
+        <View style={styles.pauseContent}>
+          {/* Task Title with Paused label */}
+          <Text style={styles.taskTitle}>
+            {taskTitle || ' '}
+            <Text style={styles.taskTitlePaused}> : Paused</Text>
+          </Text>
+
+          {/* Subtitle */}
+          <Text style={styles.pauseSubtitle}>Rest is a part of the work.</Text>
+
+          {/* Pause Illustration */}
+          <View style={styles.pauseImageWrapper}>
+            <Image
+              source={selectedImage}
+              style={styles.pauseImage}
+              resizeMode="cover"
+            />
+          </View>
+
+          {/* Action Buttons for Paused State */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.pauseButton]}
+              onPress={handleComplete}
+            >
+              <Text style={styles.pauseButtonText}>End Task</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.completeButton]}
+              onPress={handlePause}
+            >
+              <Text style={styles.completeButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (task || getDummyTask(taskId)) ? (
-        <View style={styles.content}>
-          {/* Task Title */}
-          <Text style={styles.taskTitle}>{(task || getDummyTask(taskId))?.title || taskTitle}</Text>
-
-        {/* Scheduled Duration */}
-        <Text style={styles.scheduledText}>
-          {TASK_PROGRESS_STRINGS.scheduledFor} {(task || getDummyTask(taskId))?.estimated_minutes || durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
-        </Text>
-
-        {/* Activity Indicator */}
-        <View style={styles.indicatorContainer}>
-          {timer.isRunning && (
-            <ActivityIndicator size="large" color="#333333" style={styles.activityIndicator} />
-          )}
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.pauseButton]}
-            onPress={handlePause}
-            disabled={!timer.isRunning && !timer.isPaused}
-          >
-            <Text style={styles.pauseButtonText}>{TASK_PROGRESS_STRINGS.pause}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.completeButton]}
-            onPress={handleComplete}
-          >
-            <Text style={styles.completeButtonText}>{TASK_PROGRESS_STRINGS.complete}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
       ) : (
         <View style={styles.content}>
-          <Text style={styles.errorText}>Task not found</Text>
+          {/* Task Title */}
+          <Text style={styles.taskTitle}>{taskTitle || ' '}</Text>
+
+          {/* Scheduled Duration */}
+          <Text style={styles.scheduledText}>
+            {TASK_PROGRESS_STRINGS.scheduledFor} {durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
+          </Text>
+
+          {/* Activity Indicator */}
+          <View style={styles.indicatorContainer}>
+            {timer.isRunning && (
+              <ActivityIndicator size="large" color="#333333" style={styles.activityIndicator} />
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.pauseButton]}
+              onPress={handlePause}
+              disabled={!timer.isRunning && !timer.isPaused}
+            >
+              <Text style={styles.pauseButtonText}>{TASK_PROGRESS_STRINGS.pause}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.completeButton]}
+              onPress={handleComplete}
+            >
+              <Text style={styles.completeButtonText}>{TASK_PROGRESS_STRINGS.complete}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </SafeAreaView>
@@ -160,6 +205,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
+  pauseContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
   taskTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -168,11 +220,33 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 32,
   },
+  taskTitlePaused: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
   scheduledText: {
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
     marginBottom: 48,
+  },
+  pauseSubtitle: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  pauseImageWrapper: {
+    width: 200,
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 40,
+  },
+  pauseImage: {
+    width: '100%',
+    height: '100%',
   },
   indicatorContainer: {
     height: 100,

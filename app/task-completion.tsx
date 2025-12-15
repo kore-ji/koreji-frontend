@@ -8,25 +8,13 @@ import { CompletionPage1 } from '@/components/task-completion/completion-page-1'
 import { CompletionPage2 } from '@/components/task-completion/completion-page-2';
 import { PaginationDots } from '@/components/task-completion/pagination-dots';
 import { TASK_COMPLETION_STRINGS } from '@/constants/strings/task-completion';
+import { DOG_IMAGES } from '@/constants/images';
 
 const TOTAL_PAGES = 2;
 
-// Array of all dog images
-const DOG_IMAGES = [
-  require('@/assets/dogs/dog1.jpg'),
-  require('@/assets/dogs/dog2.jpg'),
-  require('@/assets/dogs/dog3.jpg'),
-  require('@/assets/dogs/dog4.jpg'),
-  require('@/assets/dogs/dog5.jpg'),
-  require('@/assets/dogs/dog6.jpg'),
-  require('@/assets/dogs/dog7.jpg'),
-  require('@/assets/dogs/dog8.jpg'),
-  require('@/assets/dogs/dog9.jpg'),
-];
-
 export default function TaskCompletionScreen() {
   const params = useLocalSearchParams<{
-    taskId?: string;
+    task_id?: string;
     elapsedTime?: string;
     progressPercent?: string;
   }>();
@@ -48,7 +36,7 @@ export default function TaskCompletionScreen() {
     goToPreviousPage,
     goToNextPage,
   } = useTaskCompletion({
-    taskId: params.taskId,
+    task_id: params.task_id,
     progressPercent: params.progressPercent,
     elapsedTime: params.elapsedTime,
   });
@@ -59,7 +47,7 @@ export default function TaskCompletionScreen() {
         <View style={styles.content}>
           <ActivityIndicator size="large" color="#333333" />
         </View>
-      ) : task ? (
+      ) : (
         <View style={styles.content}>
           <View style={styles.pageContentWrapper}>
             {/* Left Navigation Button */}
@@ -136,10 +124,6 @@ export default function TaskCompletionScreen() {
           <TouchableOpacity style={styles.whatsNextButton} onPress={handleWhatsNext}>
             <Text style={styles.whatsNextButtonText}>{TASK_COMPLETION_STRINGS.whatsNext}</Text>
           </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.content}>
-          <Text style={styles.errorText}>Task not found</Text>
         </View>
       )}
     </SafeAreaView>
@@ -252,10 +236,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
   },
 });

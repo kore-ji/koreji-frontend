@@ -1,54 +1,48 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTask } from '@/hooks/tasks/use-task';
-import type { ApiTaskResponse } from '@/types/tasks';
-
-// TEMPORARY: Dummy data for display
-const getDummyTask = (taskId?: string): ApiTaskResponse => ({
-  id: taskId || 'dummy-task-id',
-  parent_id: null,
-  title: 'Complete Project Documentation',
-  description: 'Write comprehensive documentation for the project including API endpoints, database schema, and user guides.',
-  category: 'Work',
-  status: 'completed',
-  estimated_minutes: 120,
-  due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  tags: [],
-});
 
 interface UseTaskCompletionParams {
-  taskId?: string;
+  task_id?: string;
   progressPercent?: string;
   elapsedTime?: string;
 }
 
-export function useTaskCompletion({ taskId, progressPercent, elapsedTime }: UseTaskCompletionParams) {
+export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: UseTaskCompletionParams) {
   const router = useRouter();
-  const { task, loading, error, fetchTask, setTask } = useTask();
+  const { task, loading, error, fetchTask } = useTask();
   const [currentPage, setCurrentPage] = useState(0); // 0 = completion page, 1 = time spent page
 
-  const progress = progressPercent ? parseInt(progressPercent, 10) : 9;
-  const elapsedSeconds = elapsedTime ? parseInt(elapsedTime, 10) : 600; // Default to 10 minutes (600 seconds)
-  const elapsedMinutes = Math.round(elapsedSeconds / 60);
-  const taskTitle = (task || getDummyTask(taskId))?.title || '';
+  const taskId = task_id;
+
+  const progress = progressPercent ? parseInt(progressPercent, 10) : Number.NaN;
+  const elapsedSeconds = elapsedTime ? parseInt(elapsedTime, 10) : Number.NaN;
+  const elapsedMinutes = !isNaN(elapsedSeconds) ? Math.round(elapsedSeconds / 60) : Number.NaN;
+  const taskTitle = task?.title ?? (isNaN(Number(taskId)) ? '' : 'NaN');
 
   // Fetch task data
   useEffect(() => {
     if (taskId) {
       fetchTask(taskId);
-    } else {
-      // TEMPORARY: Use dummy data if no taskId
-      setTask(getDummyTask(taskId));
     }
-  }, [taskId, fetchTask, setTask]);
+  }, [taskId, fetchTask]);
 
-  // Handle error by redirecting back
+  // Log when using task_id fails to load a task with NaN messages
+  useEffect(() => {
+    if (!loading && taskId && (!task || error)) {
+      console.error('[Task Completion] Failed to load task with task_id: NaN', {
+        task_id: taskId,
+        error: error || 'Task not found',
+      });
+    }
+  }, [loading, taskId, task, error]);
+
+  // Log error if task failed to load, but stay on completion page
   useEffect(() => {
     if (error) {
-      console.error('[Task Completion] Failed to load task:', error);
-      router.back();
+      console.error('[Task Completion] Failed to load task: NaN', error);
     }
-  }, [error, router]);
+  }, [error]);
 
   const handleWhatsNext = () => {
     if (currentPage === 0) {
@@ -73,7 +67,7 @@ export function useTaskCompletion({ taskId, progressPercent, elapsedTime }: UseT
   };
 
   return {
-    task: task || getDummyTask(taskId),
+    task: task || null,
     loading: loading && !!taskId,
     error,
     currentPage,
@@ -85,3 +79,4 @@ export function useTaskCompletion({ taskId, progressPercent, elapsedTime }: UseT
     goToNextPage,
   };
 }
+
