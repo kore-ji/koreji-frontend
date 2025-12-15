@@ -44,6 +44,16 @@ export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: Use
     }
   }, [taskId, fetchTask, setTask]);
 
+  // Log when using task_id fails to load a task
+  useEffect(() => {
+    if (!loading && taskId && (!task || error)) {
+      console.error('[Task Completion] Failed to load task with task_id:', {
+        task_id: taskId,
+        error,
+      });
+    }
+  }, [loading, taskId, task, error]);
+
   // Handle error by redirecting back
   useEffect(() => {
     if (error) {
@@ -87,3 +97,4 @@ export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: Use
     goToNextPage,
   };
 }
+

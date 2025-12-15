@@ -48,13 +48,15 @@ export default function TaskProgressScreen() {
     }
   }, [taskId, fetchTask, setTask]);
 
-  // Handle error by redirecting back
+  // Log when using task_id fails to load a task
   useEffect(() => {
-    if (error) {
-      console.error('[Task Progress] Failed to load task:', error);
-      router.back();
+    if (!loading && taskId && (!task || error)) {
+      console.error('[Task Progress] Failed to load task with task_id:', {
+        task_id: taskId,
+        error,
+      });
     }
-  }, [error, router]);
+  }, [loading, taskId, task, error]);
 
   // Start timer automatically when page loads (user already clicked "Start Task")
   useEffect(() => {
