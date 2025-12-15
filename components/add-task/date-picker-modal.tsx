@@ -39,6 +39,19 @@ export function DatePickerModal({
   if (Platform.OS === 'web') {
     return (
       <Modal visible={visible} transparent animationType="fade">
+        {/* @ts-ignore - web only style tag */}
+        <style>{`
+          input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 1;
+            filter: brightness(0);
+            background-color: transparent;
+            padding: 4px;
+          }
+          input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 0.7;
+          }
+        `}</style>
         <TouchableOpacity
           style={styles.modalOverlayCentered}
           activeOpacity={1}
@@ -242,6 +255,8 @@ const styles = StyleSheet.create({
     fontFamily: 'inherit',
     boxSizing: 'border-box',
     minHeight: 44,
+    // Style the calendar picker button to be visible
+    cursor: 'pointer',
   } as any, // Web-specific CSS properties for native input element
 });
 
