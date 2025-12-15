@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 import { useResponsive } from '@/hooks/ui/use-responsive';
 import { TASK_COMPLETION_STRINGS } from '@/constants/strings/task-completion';
 import type { ApiTaskResponse } from '@/types/tasks';
@@ -7,9 +7,10 @@ interface CompletionPage1Props {
   taskTitle: string;
   task?: ApiTaskResponse | null;
   progress: number;
+  selectedImage: ImageSourcePropType;
 }
 
-export function CompletionPage1({ taskTitle, task, progress }: CompletionPage1Props) {
+export function CompletionPage1({ taskTitle, task, progress, selectedImage }: CompletionPage1Props) {
   const { width, isTablet, isDesktop } = useResponsive();
   
   // Calculate responsive sizes based on screen dimensions
@@ -46,10 +47,6 @@ export function CompletionPage1({ taskTitle, task, progress }: CompletionPage1Pr
       fontSize: taskTitleFontSize,
       marginBottom: 24 * spacingMultiplier,
     },
-    imagePlaceholder: {
-      width: imageSize,
-      height: imageSize,
-    },
     image: {
       width: imageSize,
       height: imageSize,
@@ -83,18 +80,13 @@ export function CompletionPage1({ taskTitle, task, progress }: CompletionPage1Pr
         {taskTitle}
       </Text>
 
-      {/* Central Image - Placeholder for corgi image */}
+      {/* Central Image - Randomly selected dog image */}
       <View style={styles.imageContainer}>
-        <View style={[styles.imagePlaceholder, dynamicStyles.imagePlaceholder]}>
-          <Text style={styles.imagePlaceholderText}>Image</Text>
-        </View>
-        {/* TODO: Replace with actual image asset when available
         <Image
-          source={require('@/assets/images/corgi-completion.png')}
+          source={selectedImage}
           style={[styles.image, dynamicStyles.image]}
           resizeMode="contain"
         />
-        */}
       </View>
 
       {/* Progress Information */}

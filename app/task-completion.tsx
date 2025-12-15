@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { useTaskCompletion } from '@/hooks/task-completion/use-task-completion';
 import { CompletionPage1 } from '@/components/task-completion/completion-page-1';
 import { CompletionPage2 } from '@/components/task-completion/completion-page-2';
@@ -10,12 +11,31 @@ import { TASK_COMPLETION_STRINGS } from '@/constants/strings/task-completion';
 
 const TOTAL_PAGES = 2;
 
+// Array of all dog images
+const DOG_IMAGES = [
+  require('@/assets/dogs/dog1.jpg'),
+  require('@/assets/dogs/dog2.jpg'),
+  require('@/assets/dogs/dog3.jpg'),
+  require('@/assets/dogs/dog4.jpg'),
+  require('@/assets/dogs/dog5.jpg'),
+  require('@/assets/dogs/dog6.jpg'),
+  require('@/assets/dogs/dog7.jpg'),
+  require('@/assets/dogs/dog8.jpg'),
+  require('@/assets/dogs/dog9.jpg'),
+];
+
 export default function TaskCompletionScreen() {
   const params = useLocalSearchParams<{
     taskId?: string;
     elapsedTime?: string;
     progressPercent?: string;
   }>();
+
+  // Randomly select one dog image (memoized to persist across page navigation)
+  const selectedImage = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * DOG_IMAGES.length);
+    return DOG_IMAGES[randomIndex];
+  }, []);
 
   const {
     task,
@@ -75,6 +95,7 @@ export default function TaskCompletionScreen() {
                   taskTitle={taskTitle}
                   task={task}
                   progress={progress}
+                  selectedImage={selectedImage}
                 />
               ) : (
                 <CompletionPage2 elapsedMinutes={elapsedMinutes} />
