@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRecordFilters } from '@/hooks/use-record-filters';
 import { HOME_SCREEN_STRINGS } from '@/constants/strings/home';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
+import { useRouter } from 'expo-router';
 
 const NO_SELECT = 'No select';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const {
     headerTitle,
     timeLabels,
@@ -69,7 +71,6 @@ export default function HomeScreen() {
   };
 
   const handleRecommend = () => {
-    // Placeholder for recommendation logic
     const MAX_PLACE_LENGTH = 30;
     let placeValue: string = selectedPlace;
     
@@ -84,11 +85,19 @@ export default function HomeScreen() {
       }
     }
     
-    console.log(actions.recommendLog, {
-      time: `${hours * 60 + minutes}`, // total minutes
-      place: placeValue,
-      mode: selectedMode,
-      tools: selectedTool.join(', '),
+    const totalMinutes = hours * 60 + minutes;
+    const safeMode = selectedMode !== NO_SELECT ? selectedMode : '';
+    const safePlace = placeValue !== NO_SELECT ? placeValue : '';
+    const safeTools = selectedTool.filter((t) => t !== NO_SELECT);
+
+    router.push({
+      pathname: '/task-recommend',
+      params: {
+        time: String(totalMinutes),
+        mode: safeMode,
+        place: safePlace,
+        tools: safeTools.join(','),
+      },
     });
   };
 

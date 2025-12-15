@@ -26,7 +26,7 @@ const DOG_IMAGES = [
 
 export default function TaskCompletionScreen() {
   const params = useLocalSearchParams<{
-    taskId?: string;
+    task_id?: string;
     elapsedTime?: string;
     progressPercent?: string;
   }>();
@@ -48,7 +48,7 @@ export default function TaskCompletionScreen() {
     goToPreviousPage,
     goToNextPage,
   } = useTaskCompletion({
-    taskId: params.taskId,
+    task_id: params.task_id,
     progressPercent: params.progressPercent,
     elapsedTime: params.elapsedTime,
   });
