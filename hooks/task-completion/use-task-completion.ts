@@ -56,7 +56,7 @@ export function useTaskCompletion({ taskId, progressPercent, elapsedTime }: UseT
       setCurrentPage(1);
     } else {
       // Navigate to next screen
-      router.push('/task-recommend');
+      router.push('/');
     }
   };
 
