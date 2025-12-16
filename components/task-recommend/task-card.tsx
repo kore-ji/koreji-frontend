@@ -9,6 +9,7 @@ export interface Task {
   duration: number; // in minutes
   source: string;
   status: TaskStatus;
+  reason?: string;
 }
 
 interface TaskCardProps {
@@ -18,15 +19,18 @@ interface TaskCardProps {
   isRecommended?: boolean;
   isSelected?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
+  onInfoPress?: () => void;
 }
 
-export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, onPress }: TaskCardProps) {
+export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, onPress, onLongPress, onInfoPress }: TaskCardProps) {
   const statusColors = TASK_STATUS_COLORS[task.status];
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={[
         styles.taskCard,
         styles.taskCardMasonry,
@@ -44,7 +48,21 @@ export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, 
           )}
           <Text style={styles.taskDuration}>{task.duration}min</Text>
         </View>
-        <Text style={styles.taskSource}>{task.source}</Text>
+        <View style={styles.sourceContainer}>
+          <Text style={styles.taskSource}>{task.source}</Text>
+          {task.reason && onInfoPress && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                onInfoPress();
+              }}
+              style={styles.infoButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="information-circle-outline" size={18} color="#666666" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Middle Row: Task Title */}
@@ -103,9 +121,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333333',
   },
+  sourceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   taskSource: {
     fontSize: 14,
     color: '#666666',
+  },
+  infoButton: {
+    padding: 2,
   },
   taskTitleContainer: {
     marginBottom: 12,

@@ -7,8 +7,10 @@ import { TaskList } from '@/components/task-recommend/task-list';
 import { TaskRecommendHeader } from '@/components/task-recommend/task-recommend-header';
 import { TaskRecommendDescription } from '@/components/task-recommend/task-recommend-description';
 import { StartTaskButton } from '@/components/task-recommend/start-task-button';
-import { post, ApiClientError } from '@/services/api/client';
+import { post, get, ApiClientError } from '@/services/api/client';
 import { DEFAULT_TASK_STATUS } from '@/constants/task-status';
+import { type ApiTaskResponse } from '@/types/tasks';
+import { TaskReasonModal } from '@/components/task-recommend/task-reason-modal';
 
 interface RecommendTask {
   task_id: string;
@@ -45,6 +47,8 @@ export default function TaskRecommendScreen() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reasonModalVisible, setReasonModalVisible] = useState(false);
+  const [selectedReasonTask, setSelectedReasonTask] = useState<Task | null>(null);
 
   const totalMinutes =
     typeof params.time === 'string' && params.time
@@ -89,20 +93,60 @@ export default function TaskRecommendScreen() {
               ? Math.max(5, Math.round(time / response.recommended_tasks.length))
               : 0;
 
+          // Fetch all tasks to get parent information
+          const taskPromises = response.recommended_tasks.map(async (t) => {
+            try {
+              const taskData = await get<ApiTaskResponse>(`/api/tasks/${t.task_id}`);
+              return { taskId: t.task_id, taskData, reason: t.reason };
+            } catch (error) {
+              console.error(`[task-recommend] Failed to fetch task ${t.task_id}:`, error);
+              return { taskId: t.task_id, taskData: null, reason: t.reason };
+            }
+          });
+
+          const taskResults = await Promise.all(taskPromises);
+
+          // Fetch parent tasks for tasks that have parent_id
+          const parentPromises = taskResults
+            .filter((result) => result.taskData?.parent_id)
+            .map(async (result) => {
+              try {
+                const parentTask = await get<ApiTaskResponse>(`/api/tasks/${result.taskData!.parent_id}`);
+                return { taskId: result.taskId, parentTitle: parentTask.title };
+              } catch (error) {
+                console.error(`[task-recommend] Failed to fetch parent task for ${result.taskId}:`, error);
+                return { taskId: result.taskId, parentTitle: null };
+              }
+            });
+
+          const parentResults = await Promise.all(parentPromises);
+          const parentMap = new Map(parentResults.map((r) => [r.taskId, r.parentTitle]));
+
+          // Map to Task[] with source and reason
           const mappedTasks: Task[] = response.recommended_tasks.map((t) => {
-            // Ensure we're using the UUID task_id from the API response
             const taskId = t.task_id;
-            console.log('[task-recommend] Mapping task:', { task_id: taskId, task_name: t.task_name });
+            const taskResult = taskResults.find((r) => r.taskId === taskId);
+            const parentTitle = parentMap.get(taskId);
+            const source = parentTitle || 'AI Recommendation';
+
+            console.log('[task-recommend] Mapping task:', {
+              task_id: taskId,
+              task_name: t.task_name,
+              parent_id: taskResult?.taskData?.parent_id,
+              source,
+            });
+
             return {
-              id: taskId, // Use UUID from API, not index
+              id: taskId,
               title: t.task_name,
               duration: perTaskDuration || totalMinutes,
-              source: 'AI Recommendation',
+              source,
               status: DEFAULT_TASK_STATUS,
+              reason: t.reason,
             };
           });
 
-          console.log('[task-recommend] Mapped tasks with IDs:', mappedTasks.map(t => ({ id: t.id, title: t.title })));
+          console.log('[task-recommend] Mapped tasks with IDs:', mappedTasks.map(t => ({ id: t.id, title: t.title, source: t.source })));
 
           setTasks(mappedTasks);
           setSelectedTaskId(mappedTasks[0]?.id ?? null);
@@ -187,6 +231,25 @@ export default function TaskRecommendScreen() {
     setSelectedTaskId(taskId);
   };
 
+  const handleTaskLongPress = (task: Task) => {
+    if (task.reason) {
+      setSelectedReasonTask(task);
+      setReasonModalVisible(true);
+    }
+  };
+
+  const handleTaskInfoPress = (task: Task) => {
+    if (task.reason) {
+      setSelectedReasonTask(task);
+      setReasonModalVisible(true);
+    }
+  };
+
+  const handleCloseReasonModal = () => {
+    setReasonModalVisible(false);
+    setSelectedReasonTask(null);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView
@@ -213,10 +276,20 @@ export default function TaskRecommendScreen() {
             cardWidth={cardWidth}
             selectedTaskId={selectedTaskId}
             onTaskSelect={handleTaskSelect}
+            onTaskLongPress={handleTaskLongPress}
+            onTaskInfoPress={handleTaskInfoPress}
           />
         </View>
       </ScrollView>
       <StartTaskButton onPress={handleStartTask} />
+      {selectedReasonTask && (
+        <TaskReasonModal
+          visible={reasonModalVisible}
+          taskTitle={selectedReasonTask.title}
+          reason={selectedReasonTask.reason || ''}
+          onClose={handleCloseReasonModal}
+        />
+      )}
     </SafeAreaView>
   );
 }
