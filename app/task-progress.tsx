@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,11 @@ export default function TaskProgressScreen() {
     time?: string;
   }>();
 
+  // Debug: Log params whenever they change
+  useEffect(() => {
+    console.log('[task-progress] Params:', params);
+  }, [params]);
+
   // Use snake_case task_id consistently for route params
   const taskId = params.task_id;
 
@@ -31,6 +36,9 @@ export default function TaskProgressScreen() {
     return DOG_IMAGES[randomIndex];
   }, []);
 
+  // Ref for focus management on web
+  const containerRef = useRef<View>(null);
+
   // Start timer automatically when page loads (user already clicked "Start Task")
   useEffect(() => {
     timer.start();
@@ -39,6 +47,25 @@ export default function TaskProgressScreen() {
       timer.stop();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Focus management for web accessibility: move focus to modal when it opens
+  useEffect(() => {
+    if (Platform.OS === 'web' && containerRef.current) {
+      // Use setTimeout to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        try {
+          // @ts-ignore - web only: access native element
+          const element = containerRef.current?.nativeElement || containerRef.current;
+          if (element && typeof element.focus === 'function') {
+            element.focus();
+          }
+        } catch {
+          // Ignore focus errors
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   const taskTitle = params.task_title || '';
   // Prefer scheduled time from params; fallback to task_duration if needed
@@ -59,7 +86,8 @@ export default function TaskProgressScreen() {
     const elapsedSeconds = timer.elapsedSeconds;
     timer.stop();
     
-    // Try to create a record, but always navigate to completion page even on failure
+    // Try to create a record only when we have a real backend task_id,
+    // but always navigate to completion page even on failure.
     try {
       if (taskId) {
         const toolsArray =
@@ -67,27 +95,43 @@ export default function TaskProgressScreen() {
             ? params.tool.split(',').map((t) => t.trim()).filter(Boolean)
             : [];
 
-        await post('/api/records', {
+        await post('/api/records/', {
           task_id: taskId,
           mode: params.mode ?? '',
           place: params.place ?? '',
           tool: toolsArray,
           occurred_at: new Date().toISOString(),
         });
-      } else {
-        console.error('[Task Progress] Cannot create record: missing task_id');
       }
     } catch (error) {
       console.error('[Task Progress] Failed to create record on completion', error);
     } finally {
       // Navigate to completion page with taskId and elapsed time from timer, even if record creation failed
+      const completionParams: Record<string, string> = {
+        elapsedTime: String(elapsedSeconds),
+        progressPercent: String(progressPercent),
+      };
+
+      // Preserve original context for completion screen (if it wants it)
+      if (typeof params.mode === 'string' && params.mode) {
+        completionParams.mode = params.mode;
+      }
+      if (typeof params.place === 'string' && params.place) {
+        completionParams.place = params.place;
+      }
+      if (typeof params.tool === 'string' && params.tool) {
+        completionParams.tool = params.tool;
+      }
+      if (typeof params.time === 'string' && params.time) {
+        completionParams.time = params.time;
+      }
+      if (taskId) {
+        completionParams.task_id = taskId;
+      }
+
       router.push({
         pathname: '/task-completion',
-        params: {
-          task_id: taskId ?? '',
-          elapsedTime: String(elapsedSeconds),
-          progressPercent: String(progressPercent),
-        },
+        params: completionParams,
       });
     }
   };
@@ -98,7 +142,12 @@ export default function TaskProgressScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top', 'bottom']}
+      ref={containerRef}
+      accessibilityViewIsModal={Platform.OS === 'web'}
+    >
       {/* Close button */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>

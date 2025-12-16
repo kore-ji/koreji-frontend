@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
+import { ScrollView, View, StyleSheet, Dimensions, ActivityIndicator, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Task } from '@/components/task-recommend/task-card';
@@ -7,37 +7,22 @@ import { TaskList } from '@/components/task-recommend/task-list';
 import { TaskRecommendHeader } from '@/components/task-recommend/task-recommend-header';
 import { TaskRecommendDescription } from '@/components/task-recommend/task-recommend-description';
 import { StartTaskButton } from '@/components/task-recommend/start-task-button';
+import { post, ApiClientError } from '@/services/api/client';
+import { DEFAULT_TASK_STATUS } from '@/constants/task-status';
 
-const DUMMY_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Organize Page Structure',
-    duration: 10,
-    source: 'Design System',
-    status: 'In progress',
-  },
-  {
-    id: '2',
-    title: 'Lo-Fi to Hi-Fi',
-    duration: 15,
-    source: 'Design System',
-    status: 'Not started',
-  },
-  {
-    id: '3',
-    title: 'Build Basic Component',
-    duration: 20,
-    source: 'Design System',
-    status: 'Not started',
-  },
-  {
-    id: '4',
-    title: 'Create User Authentication Flow',
-    duration: 25,
-    source: 'Backend API',
-    status: 'Not started',
-  },
-];
+interface RecommendTask {
+  task_id: string;
+  task_name: string;
+  reason: string;
+}
+
+interface RecommendResponse {
+  time: number;
+  mode: string;
+  place: string;
+  tool: string;
+  recommended_tasks: RecommendTask[];
+}
 
 const BREAKPOINT_TABLET = 768;
 
@@ -50,14 +35,21 @@ export default function TaskRecommendScreen() {
     tools?: string;
   }>();
 
+  // Debug: Log params whenever they change
+  useEffect(() => {
+    console.log('[task-recommend] Params:', params);
+  }, [params]);
+
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const totalMinutes =
     typeof params.time === 'string' && params.time
       ? Number(params.time)
-      : DUMMY_TASKS.reduce((sum, task) => sum + task.duration, 0);
-
-  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const [tasks] = useState<Task[]>(DUMMY_TASKS);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(DUMMY_TASKS[0]?.id || null);
+      : NaN;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -66,6 +58,90 @@ export default function TaskRecommendScreen() {
 
     return () => subscription?.remove();
   }, []);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+
+      try {
+        const time =
+          typeof params.time === 'string' && params.time
+            ? Number(params.time)
+            : NaN;
+
+        const payload = {
+          time,
+          mode: typeof params.mode === 'string' ? params.mode : '',
+          place: typeof params.place === 'string' ? params.place : '',
+          tool: typeof params.tools === 'string' ? params.tools : '',
+        };
+
+        console.log('[task-recommend] Calling /api/recommend with payload:', payload);
+
+        const response = await post<RecommendResponse>('/api/recommend/', payload);
+
+        console.log('[task-recommend] API Response:', JSON.stringify(response, null, 2));
+
+        if (response && Array.isArray(response.recommended_tasks) && response.recommended_tasks.length > 0) {
+          const perTaskDuration =
+            response.recommended_tasks.length > 0
+              ? Math.max(5, Math.round(time / response.recommended_tasks.length))
+              : 0;
+
+          const mappedTasks: Task[] = response.recommended_tasks.map((t) => {
+            // Ensure we're using the UUID task_id from the API response
+            const taskId = t.task_id;
+            console.log('[task-recommend] Mapping task:', { task_id: taskId, task_name: t.task_name });
+            return {
+              id: taskId, // Use UUID from API, not index
+              title: t.task_name,
+              duration: perTaskDuration || totalMinutes,
+              source: 'AI Recommendation',
+              status: DEFAULT_TASK_STATUS,
+            };
+          });
+
+          console.log('[task-recommend] Mapped tasks with IDs:', mappedTasks.map(t => ({ id: t.id, title: t.title })));
+
+          setTasks(mappedTasks);
+          setSelectedTaskId(mappedTasks[0]?.id ?? null);
+        } else {
+          console.log('[task-recommend] No recommended_tasks returned; leaving tasks empty.');
+          setTasks([]);
+          setSelectedTaskId(null);
+        }
+      } catch (error) {
+        if (error instanceof ApiClientError) {
+          console.error('[task-recommend] ApiClientError while calling /api/recommend:', {
+            message: error.message,
+            type: error.type,
+            status: error.status,
+            data: error.data,
+          });
+          setErrorMessage(error.message);
+        } else {
+          console.error('[task-recommend] Unexpected error while calling /api/recommend:', error);
+          setErrorMessage('Failed to load recommendations.');
+        }
+
+        // On failure, leave tasks empty and selectedTaskId null.
+        setTasks([]);
+        setSelectedTaskId(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Only call backend when we have a valid time value; otherwise leave tasks empty
+    if (typeof params.time === 'string' && params.time) {
+      fetchRecommendations();
+    } else {
+      setTasks([]);
+      setSelectedTaskId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.time, params.mode, params.place, params.tools]);
 
   // Calculate number of columns based on screen width (always use masonry, max 2 columns)
   const getColumns = () => {
@@ -92,7 +168,6 @@ export default function TaskRecommendScreen() {
         source: selectedTask.source,
         status: selectedTask.status,
       });
-
       router.push({
         pathname: '/task-progress',
         params: {
@@ -121,6 +196,17 @@ export default function TaskRecommendScreen() {
         <View style={styles.contentWrapper}>
           <TaskRecommendHeader />
           <TaskRecommendDescription totalMinutes={totalMinutes} />
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#333333" />
+              <Text style={styles.loadingText}>Loading recommendations...</Text>
+            </View>
+          )}
+          {!loading && errorMessage && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
           <TaskList 
             tasks={tasks} 
             columns={columns} 
@@ -148,6 +234,25 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     width: '100%',
+  },
+  loadingContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  errorContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
   },
 });
 

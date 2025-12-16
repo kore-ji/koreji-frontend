@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useTaskCompletion } from '@/hooks/task-completion/use-task-completion';
 import { CompletionPage1 } from '@/components/task-completion/completion-page-1';
 import { CompletionPage2 } from '@/components/task-completion/completion-page-2';
@@ -17,7 +17,38 @@ export default function TaskCompletionScreen() {
     task_id?: string;
     elapsedTime?: string;
     progressPercent?: string;
+    mode?: string;
+    place?: string;
+    tool?: string;
+    time?: string;
   }>();
+
+  // Debug: Log params whenever they change
+  useEffect(() => {
+    console.log('[task-completion] Params:', params);
+  }, [params]);
+
+  // Ref for focus management on web
+  const containerRef = useRef<View>(null);
+
+  // Focus management for web accessibility: move focus to modal when it opens
+  useEffect(() => {
+    if (Platform.OS === 'web' && containerRef.current) {
+      // Use setTimeout to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        try {
+          // @ts-ignore - web only: access native element
+          const element = containerRef.current?.nativeElement || containerRef.current;
+          if (element && typeof element.focus === 'function') {
+            element.focus();
+          }
+        } catch {
+          // Ignore focus errors
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   // Randomly select one dog image (memoized to persist across page navigation)
   const selectedImage = useMemo(() => {
@@ -42,7 +73,12 @@ export default function TaskCompletionScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top', 'bottom']}
+      ref={containerRef}
+      accessibilityViewIsModal={Platform.OS === 'web'}
+    >
       {loading ? (
         <View style={styles.content}>
           <ActivityIndicator size="large" color="#333333" />

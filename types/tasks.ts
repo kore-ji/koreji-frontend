@@ -39,6 +39,11 @@ export interface ApiTaskResponse {
   status: BackendTaskStatus;
   estimated_minutes?: number | null;
   due_date?: string | null;
+  /**
+   * Progress percentage (0.0-100.0) calculated from subtasks completion status.
+   * Not stored in DB, computed on-the-fly by the backend.
+   */
+  progress?: number;
   tags?: {
     id: string;
     name: string;
