@@ -19,6 +19,39 @@ env:
   PLAYWRIGHT_BASE_URL: http://127.0.0.1:8081
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.23.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format with Prettier
+        run: pnpm exec prettier --write .
+
+      - name: Commit and push formatted files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: apply Prettier formatting"
+          file_pattern: "*.ts *.tsx *.js *.jsx *.json *.md *.yml *.yaml"
+
   quality-checks:
     runs-on: ubuntu-latest
     steps:
