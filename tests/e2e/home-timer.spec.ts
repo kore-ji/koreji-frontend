@@ -111,11 +111,14 @@ test.describe('Home screen timer', () => {
     // Click and wait for the click to complete
     await placeDropdown.click();
 
-    // Wait for modal to appear (container is reliable; title text used as fallback)
-    const modal = page.getByTestId('filter-modal');
+    // Wait for modal to appear by waiting for its title (modal content can mount
+    // after the overlay in React Native Web, so title is the reliable signal)
     const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
-    await expect(modal).toBeVisible({ timeout: 15000 });
-    await expect(modal.getByText(expectedModalTitle)).toBeVisible();
+    await expect(page.getByText(expectedModalTitle)).toBeVisible({
+      timeout: 15000,
+    });
+    const modal = page.getByTestId('filter-modal');
+    await expect(modal).toBeVisible();
 
     // Select "Other" option within the modal to avoid matching other UI
     const otherOption = modal.getByText('Other');
