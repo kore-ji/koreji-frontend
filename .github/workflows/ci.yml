@@ -53,7 +53,7 @@ jobs:
       - name: Commit and push formatted files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "style: apply Prettier formatting"
+          commit_message: 'style: apply Prettier formatting'
 
   quality-checks:
     runs-on: ubuntu-latest
