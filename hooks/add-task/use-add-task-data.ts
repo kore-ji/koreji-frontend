@@ -69,7 +69,18 @@ export function useAddTaskData(
       };
       loadTask();
     }
-  }, [isEditMode, taskId, router, setMainTitle, setMainDesc, setMainTime, setMainStatus, setMainDeadline, setMainTags, setSubtasks]);
+  }, [
+    isEditMode,
+    taskId,
+    router,
+    setMainTitle,
+    setMainDesc,
+    setMainTime,
+    setMainStatus,
+    setMainDeadline,
+    setMainTags,
+    setSubtasks,
+  ]);
 
   return { isLoading };
 }

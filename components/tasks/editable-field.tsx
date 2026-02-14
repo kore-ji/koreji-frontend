@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 
 interface EditableFieldProps {
   value: string;
@@ -18,7 +24,7 @@ export function EditableField({
   containerStyle,
   placeholder,
   isReadOnly = false,
-  onSave
+  onSave,
 }: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
@@ -47,7 +53,7 @@ export function EditableField({
         <TextInput
           value={tempValue}
           onChangeText={setTempValue}
-          onSubmitEditing={handleSubmit} // Trigger save when pressing Enter  
+          onSubmitEditing={handleSubmit} // Trigger save when pressing Enter
           onBlur={handleSubmit} // Trigger save when losing focus
           autoFocus
           keyboardType={isNumeric ? 'numeric' : 'default'}
@@ -68,10 +74,12 @@ export function EditableField({
       style={containerStyle}
       activeOpacity={isReadOnly ? 1 : 0.6}
     >
-      <Text style={[
-        textStyle,
-        isReadOnly && { opacity: 0.6 } // When read-only, slightly fade out
-      ]}>
+      <Text
+        style={[
+          textStyle,
+          isReadOnly && { opacity: 0.6 }, // When read-only, slightly fade out
+        ]}
+      >
         {value || placeholder}
       </Text>
     </TouchableOpacity>

@@ -13,7 +13,7 @@ interface UseResponsiveReturn {
 /**
  * Hook to determine responsive breakpoints based on window dimensions.
  * Automatically updates when window size changes (especially useful for web).
- * 
+ *
  * Breakpoints:
  * - Mobile: < 768px
  * - Tablet: 768px - 1024px
@@ -42,6 +42,3 @@ export function useResponsive(): UseResponsiveReturn {
     screenSize,
   };
 }
-
-
-

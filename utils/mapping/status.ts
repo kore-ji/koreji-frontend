@@ -3,7 +3,11 @@ import { type TaskStatus } from '@/types/task-status';
 /**
  * Backend task status type
  */
-export type BackendTaskStatus = 'pending' | 'in_progress' | 'completed' | 'archived';
+export type BackendTaskStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'archived';
 
 /**
  * Maps frontend task status to backend API status format
@@ -15,8 +19,8 @@ export function mapStatusToBackend(status: TaskStatus): BackendTaskStatus {
   const mapping: Record<TaskStatus, BackendTaskStatus> = {
     'Not started': 'pending',
     'In progress': 'in_progress',
-    'Done': 'completed',
-    'Archive': 'archived',
+    Done: 'completed',
+    Archive: 'archived',
   };
   return mapping[status];
 }

@@ -1,4 +1,10 @@
-import { View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Pressable,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { EditableField } from './editable-field';
@@ -18,10 +24,17 @@ interface TaskItemProps {
   isTitleHovered: boolean;
   isDescHovered: boolean;
   hoveredSubtaskId: string | null;
-  hoveredSubtaskField: { subtaskId: string; field: 'title' | 'description' } | null;
+  hoveredSubtaskField: {
+    subtaskId: string;
+    field: 'title' | 'description';
+  } | null;
   mouseHandlers: {
     container: (taskId: string | null, isSubtask: boolean) => any;
-    editableField: (taskId: string, field: 'title' | 'description', isSubtask: boolean) => any;
+    editableField: (
+      taskId: string,
+      field: 'title' | 'description',
+      isSubtask: boolean
+    ) => any;
     clearHover: (taskId: string, isSubtask: boolean) => any;
   };
   onStatusPress: () => void;
@@ -102,29 +115,40 @@ export function TaskItemComponent({
               textStyle={[
                 styles.taskTitle,
                 { fontSize: layout.taskTitleSize },
-                isTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                isTitleHovered &&
+                  Platform.OS === 'web' &&
+                  styles.editableFieldHovered,
               ]}
               onSave={(val) => onUpdateField(item.id, 'title', val)}
             />
           </View>
 
           {hasSubtasks && (
-            <TouchableOpacity onPress={onToggleExpand} style={styles.expandButton}>
-              <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color="#999" />
+            <TouchableOpacity
+              onPress={onToggleExpand}
+              style={styles.expandButton}
+            >
+              <Ionicons
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
           )}
         </View>
 
-        <View
-          {...mouseHandlers.editableField(item.id, 'description', false)}
-        >
+        <View {...mouseHandlers.editableField(item.id, 'description', false)}>
           <EditableField
             value={item.description}
-            placeholder={TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder}
+            placeholder={
+              TASK_SCREEN_STRINGS.tasksList.addDescriptionPlaceholder
+            }
             textStyle={[
               styles.taskDesc,
               { fontSize: layout.taskDescSize },
-              isDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+              isDescHovered &&
+                Platform.OS === 'web' &&
+                styles.editableFieldHovered,
             ]}
             onSave={(val) => onUpdateField(item.id, 'description', val)}
           />
@@ -134,7 +158,9 @@ export function TaskItemComponent({
           style={styles.tagsContainer}
           {...mouseHandlers.clearHover(item.id, false)}
         >
-          <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.tagsLabel}</Text>
+          <Text style={styles.tagsLabel}>
+            {TASK_SCREEN_STRINGS.addTask.tagsLabel}
+          </Text>
           <View style={styles.tagsRow}>
             <TagDisplayRow
               tags={buildTaskTagsFromTask(item)}
@@ -163,9 +189,13 @@ export function TaskItemComponent({
                 isNumeric
                 textStyle={styles.tagTime}
                 containerStyle={styles.timeTagContainer}
-                onSave={(val) => onUpdateField(item.id, 'estimatedTime', parseInt(val) || 0)}
+                onSave={(val) =>
+                  onUpdateField(item.id, 'estimatedTime', parseInt(val) || 0)
+                }
               />
-              <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+              <Text style={styles.tagUnit}>
+                {TASK_SCREEN_STRINGS.tasksList.timeUnit}
+              </Text>
             </View>
           </View>
         )}
@@ -184,15 +214,23 @@ export function TaskItemComponent({
             </TouchableOpacity>
             <View style={styles.progressContainer}>
               <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${progressPercent}%` },
+                  ]}
+                />
               </View>
               <Text style={styles.progressText}>
-                {Math.round(progressPercent)}{TASK_SCREEN_STRINGS.tasksList.progressUnit}
+                {Math.round(progressPercent)}
+                {TASK_SCREEN_STRINGS.tasksList.progressUnit}
               </Text>
             </View>
             <View style={styles.totalTimeBadge}>
               <Text style={styles.totalTimeText}>
-                {TASK_SCREEN_STRINGS.tasksList.totalTimePrefix} {item.displayTime} {TASK_SCREEN_STRINGS.tasksList.totalTimeSuffix}
+                {TASK_SCREEN_STRINGS.tasksList.totalTimePrefix}{' '}
+                {item.displayTime}{' '}
+                {TASK_SCREEN_STRINGS.tasksList.totalTimeSuffix}
               </Text>
             </View>
           </View>
@@ -202,8 +240,12 @@ export function TaskItemComponent({
       {isExpanded && hasSubtasks && (
         <View style={styles.subtaskList}>
           {item.subtasks.map((sub) => {
-            const isSubtaskTitleHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'title';
-            const isSubtaskDescHovered = hoveredSubtaskField?.subtaskId === sub.id && hoveredSubtaskField?.field === 'description';
+            const isSubtaskTitleHovered =
+              hoveredSubtaskField?.subtaskId === sub.id &&
+              hoveredSubtaskField?.field === 'title';
+            const isSubtaskDescHovered =
+              hoveredSubtaskField?.subtaskId === sub.id &&
+              hoveredSubtaskField?.field === 'description';
             const isSubtaskHovered = hoveredSubtaskId === sub.id;
 
             return (

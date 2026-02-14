@@ -22,7 +22,7 @@ export interface ApiTaskResponse {
   status: BackendTaskStatus;
   estimated_minutes?: number | null;
   due_date?: string | null;
-   tags?: {
+  tags?: {
     id: string;
     name: string;
     tag_group_id: string;
@@ -36,4 +36,3 @@ export interface ApiTaskResponse {
   }[];
   subtasks?: ApiTaskResponse[];
 }
-

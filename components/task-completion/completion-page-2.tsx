@@ -14,7 +14,7 @@ export function CompletionPage2({ elapsedMinutes }: CompletionPage2Props) {
       <Text style={styles.timeDisplay}>{elapsedMinutes} minutes</Text>
 
       {/* Encouragement Message */}
-      <Text style={styles.momentumText}>{'You\'re building momentum!'}</Text>
+      <Text style={styles.momentumText}>{"You're building momentum!"}</Text>
     </View>
   );
 }

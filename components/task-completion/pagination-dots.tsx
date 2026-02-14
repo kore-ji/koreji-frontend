@@ -5,7 +5,10 @@ interface PaginationDotsProps {
   totalPages: number;
 }
 
-export function PaginationDots({ currentPage, totalPages }: PaginationDotsProps) {
+export function PaginationDots({
+  currentPage,
+  totalPages,
+}: PaginationDotsProps) {
   return (
     <View style={styles.container}>
       {Array.from({ length: totalPages }, (_, index) => (

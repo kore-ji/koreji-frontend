@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, Dimensions, ActivityIndicator, Text } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Task } from '@/components/task-recommend/task-card';
@@ -42,18 +49,20 @@ export default function TaskRecommendScreen() {
     console.log('[task-recommend] Params:', params);
   }, [params]);
 
-  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const [screenWidth, setScreenWidth] = useState(
+    Dimensions.get('window').width
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reasonModalVisible, setReasonModalVisible] = useState(false);
-  const [selectedReasonTask, setSelectedReasonTask] = useState<Task | null>(null);
+  const [selectedReasonTask, setSelectedReasonTask] = useState<Task | null>(
+    null
+  );
 
   const totalMinutes =
-    typeof params.time === 'string' && params.time
-      ? Number(params.time)
-      : NaN;
+    typeof params.time === 'string' && params.time ? Number(params.time) : NaN;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -81,25 +90,46 @@ export default function TaskRecommendScreen() {
           tool: typeof params.tools === 'string' ? params.tools : '',
         };
 
-        console.log('[task-recommend] Calling /api/recommend with payload:', payload);
+        console.log(
+          '[task-recommend] Calling /api/recommend with payload:',
+          payload
+        );
 
-        const response = await post<RecommendResponse>('/api/recommend/', payload);
+        const response = await post<RecommendResponse>(
+          '/api/recommend/',
+          payload
+        );
 
-        console.log('[task-recommend] API Response:', JSON.stringify(response, null, 2));
+        console.log(
+          '[task-recommend] API Response:',
+          JSON.stringify(response, null, 2)
+        );
 
-        if (response && Array.isArray(response.recommended_tasks) && response.recommended_tasks.length > 0) {
+        if (
+          response &&
+          Array.isArray(response.recommended_tasks) &&
+          response.recommended_tasks.length > 0
+        ) {
           const perTaskDuration =
             response.recommended_tasks.length > 0
-              ? Math.max(5, Math.round(time / response.recommended_tasks.length))
+              ? Math.max(
+                  5,
+                  Math.round(time / response.recommended_tasks.length)
+                )
               : 0;
 
           // Fetch all tasks to get parent information
           const taskPromises = response.recommended_tasks.map(async (t) => {
             try {
-              const taskData = await get<ApiTaskResponse>(`/api/tasks/${t.task_id}`);
+              const taskData = await get<ApiTaskResponse>(
+                `/api/tasks/${t.task_id}`
+              );
               return { taskId: t.task_id, taskData, reason: t.reason };
             } catch (error) {
-              console.error(`[task-recommend] Failed to fetch task ${t.task_id}:`, error);
+              console.error(
+                `[task-recommend] Failed to fetch task ${t.task_id}:`,
+                error
+              );
               return { taskId: t.task_id, taskData: null, reason: t.reason };
             }
           });
@@ -111,16 +141,23 @@ export default function TaskRecommendScreen() {
             .filter((result) => result.taskData?.parent_id)
             .map(async (result) => {
               try {
-                const parentTask = await get<ApiTaskResponse>(`/api/tasks/${result.taskData!.parent_id}`);
+                const parentTask = await get<ApiTaskResponse>(
+                  `/api/tasks/${result.taskData!.parent_id}`
+                );
                 return { taskId: result.taskId, parentTitle: parentTask.title };
               } catch (error) {
-                console.error(`[task-recommend] Failed to fetch parent task for ${result.taskId}:`, error);
+                console.error(
+                  `[task-recommend] Failed to fetch parent task for ${result.taskId}:`,
+                  error
+                );
                 return { taskId: result.taskId, parentTitle: null };
               }
             });
 
           const parentResults = await Promise.all(parentPromises);
-          const parentMap = new Map(parentResults.map((r) => [r.taskId, r.parentTitle]));
+          const parentMap = new Map(
+            parentResults.map((r) => [r.taskId, r.parentTitle])
+          );
 
           // Map to Task[] with source and reason
           const mappedTasks: Task[] = response.recommended_tasks.map((t) => {
@@ -146,26 +183,41 @@ export default function TaskRecommendScreen() {
             };
           });
 
-          console.log('[task-recommend] Mapped tasks with IDs:', mappedTasks.map(t => ({ id: t.id, title: t.title, source: t.source })));
+          console.log(
+            '[task-recommend] Mapped tasks with IDs:',
+            mappedTasks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              source: t.source,
+            }))
+          );
 
           setTasks(mappedTasks);
           setSelectedTaskId(mappedTasks[0]?.id ?? null);
         } else {
-          console.log('[task-recommend] No recommended_tasks returned; leaving tasks empty.');
+          console.log(
+            '[task-recommend] No recommended_tasks returned; leaving tasks empty.'
+          );
           setTasks([]);
           setSelectedTaskId(null);
         }
       } catch (error) {
         if (error instanceof ApiClientError) {
-          console.error('[task-recommend] ApiClientError while calling /api/recommend:', {
-            message: error.message,
-            type: error.type,
-            status: error.status,
-            data: error.data,
-          });
+          console.error(
+            '[task-recommend] ApiClientError while calling /api/recommend:',
+            {
+              message: error.message,
+              type: error.type,
+              status: error.status,
+              data: error.data,
+            }
+          );
           setErrorMessage(error.message);
         } else {
-          console.error('[task-recommend] Unexpected error while calling /api/recommend:', error);
+          console.error(
+            '[task-recommend] Unexpected error while calling /api/recommend:',
+            error
+          );
           setErrorMessage('Failed to load recommendations.');
         }
 
@@ -198,11 +250,11 @@ export default function TaskRecommendScreen() {
   const containerPadding = 48; // 24px on each side
   const gapSize = 16;
   const availableWidth = screenWidth - containerPadding;
-  const cardWidth = (availableWidth - (gapSize * (columns - 1))) / columns;
+  const cardWidth = (availableWidth - gapSize * (columns - 1)) / columns;
 
   const handleStartTask = async () => {
     if (!selectedTaskId) return;
-    
+
     const selectedTask = tasks.find((task) => task.id === selectedTaskId);
     if (selectedTask) {
       console.log('Start task pressed - Selected task info:', {
@@ -270,9 +322,9 @@ export default function TaskRecommendScreen() {
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
-          <TaskList 
-            tasks={tasks} 
-            columns={columns} 
+          <TaskList
+            tasks={tasks}
+            columns={columns}
             cardWidth={cardWidth}
             selectedTaskId={selectedTaskId}
             onTaskSelect={handleTaskSelect}
@@ -328,4 +380,3 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
   },
 });
-

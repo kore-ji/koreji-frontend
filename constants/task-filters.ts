@@ -31,4 +31,3 @@ export enum TaskTool {
 export const formatFilterValue = (value: string): string => {
   return `> ${value}`;
 };
-

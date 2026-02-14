@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { type TaskItem } from '@/types/tasks';
-import { buildTaskTagsFromTask, buildTaskFieldsFromSelection } from '@/utils/tasks/task-tags';
+import {
+  buildTaskTagsFromTask,
+  buildTaskFieldsFromSelection,
+} from '@/utils/tasks/task-tags';
 import { useTaskTagsData } from './use-task-tags-data';
 import { useTaskTagsTransformation } from './use-task-tags-transformation';
 import { useTaskTagsOperations } from './use-task-tags-operations';
@@ -14,7 +17,11 @@ import type { TagResponse } from '@/hooks/tasks/use-tags';
  */
 export function useTaskTags(
   tasks: TaskItem[],
-  updateTaskField: (id: string, field: keyof TaskItem, value: any) => Promise<void>,
+  updateTaskField: (
+    id: string,
+    field: keyof TaskItem,
+    value: any
+  ) => Promise<void>,
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>
 ) {
   // Data fetching
@@ -29,15 +36,23 @@ export function useTaskTags(
   } = useTaskTagsData();
 
   // Editing state
-  const [editingTagTarget, setEditingTagTarget] = useState<'main' | string | null>(null);
+  const [editingTagTarget, setEditingTagTarget] = useState<
+    'main' | string | null
+  >(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [tempTags, setTempTags] = useState<TaskTags>({ tagGroups: {} });
 
   // Tag groups display state
-  const [tagGroups, setTagGroups] = useState<{ [groupName: string]: string[] }>({});
+  const [tagGroups, setTagGroups] = useState<{ [groupName: string]: string[] }>(
+    {}
+  );
   const [tagGroupOrder, setTagGroupOrder] = useState<string[]>([]);
-  const [tagGroupColors, setTagGroupColors] = useState<{ [groupName: string]: { bg: string; text: string } }>({});
-  const [tagGroupConfigs, setTagGroupConfigs] = useState<{ [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } }>({});
+  const [tagGroupColors, setTagGroupColors] = useState<{
+    [groupName: string]: { bg: string; text: string };
+  }>({});
+  const [tagGroupConfigs, setTagGroupConfigs] = useState<{
+    [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean };
+  }>({});
 
   // Transform database data into component-friendly format
   useTaskTagsTransformation(
@@ -103,7 +118,8 @@ export function useTaskTags(
           return { tagGroups: rest };
         })();
 
-    const { categoryValue, priorityValue, nextTags } = buildTaskFieldsFromSelection(selection, includeCategory);
+    const { categoryValue, priorityValue, nextTags } =
+      buildTaskFieldsFromSelection(selection, includeCategory);
 
     // Build backend tag_ids from the current selection (excluding Category which is stored on the task itself)
     const buildTagIdsFromSelection = (
@@ -148,7 +164,12 @@ export function useTaskTags(
 
     const currentTask = tasks.find((t) => t.id === editingTaskId);
     if (currentTask) {
-      console.log('[Tag Update] Task:', editingTaskId, 'New tags:', selection.tagGroups);
+      console.log(
+        '[Tag Update] Task:',
+        editingTaskId,
+        'New tags:',
+        selection.tagGroups
+      );
 
       // Update category in backend if it changed
       if (includeCategory && categoryValue !== currentTask.category) {

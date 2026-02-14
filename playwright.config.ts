@@ -11,7 +11,7 @@ const baseURL = envBaseURL ?? defaultBaseURL;
 if (!envBaseURL && isPlaywrightCLI) {
   // Inform rather than fail; fall back to defaultBaseURL.
   console.warn(
-    'PLAYWRIGHT_BASE_URL is not set. Using default http://localhost:8081. Set it in .env to silence this warning.',
+    'PLAYWRIGHT_BASE_URL is not set. Using default http://localhost:8081. Set it in .env to silence this warning.'
   );
 }
 
@@ -45,4 +45,3 @@ export default defineConfig({
     },
   ],
 });
-

@@ -2,7 +2,11 @@ import { StyleSheet, Platform } from 'react-native';
 
 export const tasksStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
-  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  header: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
   headerTitle: { fontWeight: 'bold', color: '#333' },
   listContent: { paddingBottom: 80 },
   card: {
@@ -56,13 +60,28 @@ export const tasksStyles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  categoryBadge: { backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: 4 },
-  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' },
+  categoryBadge: {
+    backgroundColor: '#333',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  categoryText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
   titleContainer: { flex: 1 },
   expandButton: { padding: 4 },
 
   // Editable Styles
-  inputWrapper: { borderBottomWidth: 1, borderBottomColor: '#2196f3', paddingBottom: 2 },
+  inputWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#2196f3',
+    paddingBottom: 2,
+  },
   taskTitle: {
     fontSize: 20,
     fontWeight: '600',
@@ -94,11 +113,26 @@ export const tasksStyles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  progressBarBg: { flex: 1, height: 6, backgroundColor: '#eee', borderRadius: 3, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 3 },
+  progressBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#eee',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 3,
+  },
   progressText: { fontSize: 12, color: '#888', width: 36, textAlign: 'right' },
 
-  totalTimeBadge: { backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  totalTimeBadge: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   totalTimeText: { fontSize: 12, fontWeight: '600', color: '#555' },
 
   // Subtasks
@@ -202,11 +236,35 @@ export const tasksStyles = StyleSheet.create({
   subtaskTagsContainer: {
     marginTop: 0,
   },
-  tagsPressable: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  tagChipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 },
-  editIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#f2f2f2', alignItems: 'center', justifyContent: 'center' },
+  tagsPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  tagChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  editIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#f2f2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   timeTagContainer: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
-  tagTime: { fontSize: 13, color: '#333', fontWeight: '600', textAlign: 'center', minWidth: 20 },
+  tagTime: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '600',
+    textAlign: 'center',
+    minWidth: 20,
+  },
   tagUnit: { fontSize: 12, color: '#888', marginRight: 4 },
   clockIcon: { fontSize: 12 },
   singleTimeRow: {
@@ -294,7 +352,13 @@ export const tasksStyles = StyleSheet.create({
     borderColor: '#2196f3',
   },
 
-  fab: { position: 'absolute', backgroundColor: '#2196f3', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  fab: {
+    position: 'absolute',
+    backgroundColor: '#2196f3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
 
   infoBanner: {
     backgroundColor: '#E3F2FD',
@@ -316,7 +380,11 @@ export const tasksStyles = StyleSheet.create({
     borderColor: '#FFCDD2',
   },
   errorText: { color: '#B71C1C', fontSize: 13 },
-  emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyStateCard: {
     width: '100%',
     maxWidth: 480,
@@ -337,8 +405,19 @@ export const tasksStyles = StyleSheet.create({
       },
     }),
   },
-  emptyStateTitle: { fontSize: 18, fontWeight: '700', color: '#333', textAlign: 'center', marginBottom: 8 },
-  emptyStateSubtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 16 },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   emptyStateButton: {
     backgroundColor: '#2196f3',
     paddingVertical: 10,

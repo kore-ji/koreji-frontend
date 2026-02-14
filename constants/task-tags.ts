@@ -1,13 +1,13 @@
 // Tag groups configuration
 export const DEFAULT_CATEGORIES = ['School', 'Home', 'Work', 'Personal'];
 
-export const TAG_GROUPS: { 
-  [groupName: string]: { 
-    tags: string[]; 
-    isSingleSelect: boolean; 
-    allowAddTags: boolean; 
-    color: { bg: string; text: string } 
-  } 
+export const TAG_GROUPS: {
+  [groupName: string]: {
+    tags: string[];
+    isSingleSelect: boolean;
+    allowAddTags: boolean;
+    color: { bg: string; text: string };
+  };
 } = {
   Category: {
     tags: DEFAULT_CATEGORIES,
@@ -42,7 +42,13 @@ export const TAG_GROUPS: {
 };
 
 // Default tag group order (creation order)
-export const DEFAULT_TAG_GROUP_ORDER = ['Category', 'Priority', 'Attention', 'Tools', 'Place'];
+export const DEFAULT_TAG_GROUP_ORDER = [
+  'Category',
+  'Priority',
+  'Attention',
+  'Tools',
+  'Place',
+];
 
 // Available colors for new tag groups
 export const TAG_GROUP_COLORS = [

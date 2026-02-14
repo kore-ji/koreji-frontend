@@ -1,4 +1,10 @@
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface SubtaskHeaderProps {
@@ -28,13 +34,25 @@ export function SubtaskHeader({
           disabled={aiLoading}
         >
           {aiLoading ? (
-            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
+            <ActivityIndicator
+              size="small"
+              color="#fff"
+              style={{ marginRight: 4 }}
+            />
           ) : (
-            <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 4 }} />
+            <Ionicons
+              name="sparkles"
+              size={16}
+              color="#fff"
+              style={{ marginRight: 4 }}
+            />
           )}
           <Text style={styles.aiButtonText}>{aiGenerateButtonText}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onAddSubtask} style={styles.addSubtaskButton}>
+        <TouchableOpacity
+          onPress={onAddSubtask}
+          style={styles.addSubtaskButton}
+        >
           <Text style={styles.addLink}>{addSubtaskButtonText}</Text>
         </TouchableOpacity>
       </View>

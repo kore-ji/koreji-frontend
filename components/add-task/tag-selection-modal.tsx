@@ -1,4 +1,13 @@
-import { Modal, View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Platform } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { type TaskTags } from '@/components/ui/tag-display-row';
 import { TAG_GROUP_COLORS } from '@/constants/task-tags';
@@ -10,7 +19,9 @@ interface TagSelectionModalProps {
   tagGroups: { [groupName: string]: string[] };
   tagGroupOrder: string[];
   tagGroupColors: { [groupName: string]: { bg: string; text: string } };
-  tagGroupConfigs: { [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean } };
+  tagGroupConfigs: {
+    [groupName: string]: { isSingleSelect: boolean; allowAddTags: boolean };
+  };
   editingTagInGroup: { groupName: string; groupId?: string } | null;
   newTagInGroupName: string;
   showTagGroupInput: boolean;
@@ -98,77 +109,101 @@ export function TagSelectionModal({
                 })
                 .map((groupName) => {
                   const tags = tagGroups[groupName] || []; // Default to empty array instead of null
-                  const groupConfig = tagGroupConfigs[groupName] || { isSingleSelect: false, allowAddTags: true };
+                  const groupConfig = tagGroupConfigs[groupName] || {
+                    isSingleSelect: false,
+                    allowAddTags: true,
+                  };
                   const isSingleSelect = groupConfig.isSingleSelect;
                   const allowAddTags = groupConfig.allowAddTags !== false; // Default to true if not set
                   const selectedTags = tempTags.tagGroups?.[groupName] || [];
-                  const isSelected = isSingleSelect ? selectedTags.length > 0 && selectedTags[0] : null;
+                  const isSelected = isSingleSelect
+                    ? selectedTags.length > 0 && selectedTags[0]
+                    : null;
 
                   // Always show the group even if it has no tags
                   return (
-                  <View key={groupName}>
-                    <Text style={styles.modalLabel}>{groupName}</Text>
-                    <View style={styles.chipContainer}>
-                      {tags.map((tag) => {
-                        const tagIsSelected = isSingleSelect
-                          ? isSelected === tag
-                          : selectedTags.includes(tag);
+                    <View key={groupName}>
+                      <Text style={styles.modalLabel}>{groupName}</Text>
+                      <View style={styles.chipContainer}>
+                        {tags.map((tag) => {
+                          const tagIsSelected = isSingleSelect
+                            ? isSelected === tag
+                            : selectedTags.includes(tag);
 
-                        // Get color for this tag group
-                        const groupColor = tagGroupColors[groupName] || TAG_GROUP_COLORS[0];
-                        const selectedStyle = {
-                          backgroundColor: groupColor.bg,
-                          borderColor: groupColor.text,
-                        };
-                        const selectedTextStyle = {
-                          color: groupColor.text,
-                        };
+                          // Get color for this tag group
+                          const groupColor =
+                            tagGroupColors[groupName] || TAG_GROUP_COLORS[0];
+                          const selectedStyle = {
+                            backgroundColor: groupColor.bg,
+                            borderColor: groupColor.text,
+                          };
+                          const selectedTextStyle = {
+                            color: groupColor.text,
+                          };
 
-                        return (
-                          <TouchableOpacity
-                            key={tag}
-                            style={[styles.chip, styles.chipOutline, tagIsSelected && selectedStyle]}
-                            onPress={() => onToggleTag(groupName, tag)}
-                          >
-                            <Text style={[styles.chipText, tagIsSelected && selectedTextStyle]}>
-                              {tag}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                      {/* Show add tag button only if the group allows adding tags */}
-                      {allowAddTags && (
-                        editingTagInGroup?.groupName === groupName ? (
-                          <View style={styles.newPlaceInputContainer}>
-                            <TextInput
-                              style={styles.newPlaceInput}
-                              placeholder={newTagPlaceholder}
-                              placeholderTextColor="#ccc"
-                              value={newTagInGroupName}
-                              onChangeText={onNewTagInGroupNameChange}
-                              autoFocus
-                              onSubmitEditing={onSaveTagToGroup}
-                            />
-                            <TouchableOpacity style={styles.savePlaceBtn} onPress={onSaveTagToGroup}>
-                              <Ionicons name="checkmark" size={16} color="#4CAF50" />
+                          return (
+                            <TouchableOpacity
+                              key={tag}
+                              style={[
+                                styles.chip,
+                                styles.chipOutline,
+                                tagIsSelected && selectedStyle,
+                              ]}
+                              onPress={() => onToggleTag(groupName, tag)}
+                            >
+                              <Text
+                                style={[
+                                  styles.chipText,
+                                  tagIsSelected && selectedTextStyle,
+                                ]}
+                              >
+                                {tag}
+                              </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.cancelPlaceBtn} onPress={onCancelTagInGroup}>
-                              <Ionicons name="close" size={16} color="#666" />
+                          );
+                        })}
+                        {/* Show add tag button only if the group allows adding tags */}
+                        {allowAddTags &&
+                          (editingTagInGroup?.groupName === groupName ? (
+                            <View style={styles.newPlaceInputContainer}>
+                              <TextInput
+                                style={styles.newPlaceInput}
+                                placeholder={newTagPlaceholder}
+                                placeholderTextColor="#ccc"
+                                value={newTagInGroupName}
+                                onChangeText={onNewTagInGroupNameChange}
+                                autoFocus
+                                onSubmitEditing={onSaveTagToGroup}
+                              />
+                              <TouchableOpacity
+                                style={styles.savePlaceBtn}
+                                onPress={onSaveTagToGroup}
+                              >
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#4CAF50"
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.cancelPlaceBtn}
+                                onPress={onCancelTagInGroup}
+                              >
+                                <Ionicons name="close" size={16} color="#666" />
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.addButton}
+                              onPress={() => onAddTagToGroup(groupName)}
+                            >
+                              <Ionicons name="add" size={18} color="#666" />
                             </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => onAddTagToGroup(groupName)}
-                          >
-                            <Ionicons name="add" size={18} color="#666" />
-                          </TouchableOpacity>
-                        )
-                      )}
+                          ))}
+                      </View>
                     </View>
-                  </View>
-                );
-              })
+                  );
+                })
             )}
 
             {/* Add New Tag Group */}
@@ -183,16 +218,25 @@ export function TagSelectionModal({
                   autoFocus
                   onSubmitEditing={onSaveNewTagGroup}
                 />
-                <TouchableOpacity style={styles.savePlaceBtn} onPress={onSaveNewTagGroup}>
+                <TouchableOpacity
+                  style={styles.savePlaceBtn}
+                  onPress={onSaveNewTagGroup}
+                >
                   <Ionicons name="checkmark" size={16} color="#4CAF50" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelPlaceBtn} onPress={onCancelTagGroup}>
+                <TouchableOpacity
+                  style={styles.cancelPlaceBtn}
+                  onPress={onCancelTagGroup}
+                >
                   <Ionicons name="close" size={16} color="#666" />
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={[styles.chipContainer, { marginTop: 16 }]}>
-                <TouchableOpacity style={styles.addTagGroupButton} onPress={onAddNewTagGroup}>
+                <TouchableOpacity
+                  style={styles.addTagGroupButton}
+                  onPress={onAddNewTagGroup}
+                >
                   <Ionicons name="add" size={20} color="#4CAF50" />
                 </TouchableOpacity>
               </View>
@@ -320,4 +364,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

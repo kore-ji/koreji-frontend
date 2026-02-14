@@ -5,7 +5,9 @@ export const buildTaskTagsFromTask = (task: TaskItem): TaskTags => {
   // TaskItem.tags is already a generic { [groupName]: string[] } map
   // built from backend tag groups. We only need to merge in Category
   // and Priority from their dedicated fields when present.
-  const baseGroups: { [groupName: string]: string[] } = { ...(task.tags || {}) };
+  const baseGroups: { [groupName: string]: string[] } = {
+    ...(task.tags || {}),
+  };
   if (task.category) {
     baseGroups.Category = [task.category];
   }
@@ -21,7 +23,10 @@ export const buildSubtaskTagsFromTask = (task: TaskItem): TaskTags => {
   return { tagGroups: rest };
 };
 
-export const buildTaskFieldsFromSelection = (selection: TaskTags, includeCategory: boolean) => {
+export const buildTaskFieldsFromSelection = (
+  selection: TaskTags,
+  includeCategory: boolean
+) => {
   const groups = selection.tagGroups || {};
   const { Category, Priority, ...rest } = groups;
 

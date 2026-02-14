@@ -23,12 +23,16 @@ export function useTags() {
     setLoading(true);
     setError(null);
     try {
-      const data = await get<TagResponse[]>(`/api/tasks/tag-groups/${groupId}/tags`);
+      const data = await get<TagResponse[]>(
+        `/api/tasks/tag-groups/${groupId}/tags`
+      );
       setTags(Array.isArray(data) ? data : []);
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.type === ApiErrorType.CONFIG) {
-          setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+          setError(
+            'Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.'
+          );
         } else {
           setError(err.message);
         }

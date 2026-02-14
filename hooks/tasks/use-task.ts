@@ -25,7 +25,9 @@ export function useTask() {
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.type === ApiErrorType.CONFIG) {
-          setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+          setError(
+            'Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.'
+          );
         } else {
           setError(err.message);
         }

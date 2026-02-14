@@ -1,4 +1,10 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TASK_RECOMMEND_STRINGS } from '@/constants/strings/task-recommend';
 
@@ -15,7 +21,12 @@ export function StartTaskButton({ onPress }: StartTaskButtonProps) {
           activeOpacity={0.8}
           onPress={onPress}
         >
-          <Ionicons name="play" size={20} color="#2196f3" style={styles.buttonIcon} />
+          <Ionicons
+            name="play"
+            size={20}
+            color="#2196f3"
+            style={styles.buttonIcon}
+          />
           <Text style={styles.buttonText}>
             {TASK_RECOMMEND_STRINGS.button.startTask}
           </Text>
@@ -70,6 +81,3 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
-
-
-

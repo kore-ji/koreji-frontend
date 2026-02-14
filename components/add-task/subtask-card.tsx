@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TagDisplayRow } from '@/components/ui/tag-display-row';
 import { TimeDeadlineRow } from './time-deadline-row';
@@ -20,7 +28,11 @@ interface SubtaskCardProps {
   subtaskTagsLabel: string;
   statusLabel: string;
   statusPlaceholder: string;
-  onUpdate: (id: string, field: keyof LocalSubTask, value: string | Date | null | TaskStatus) => void;
+  onUpdate: (
+    id: string,
+    field: keyof LocalSubTask,
+    value: string | Date | null | TaskStatus
+  ) => void;
   onRemove: (id: string) => void;
   onDeadlinePress: (id: string) => void;
   onTagsEdit: (id: string) => void;
@@ -57,13 +69,26 @@ export function SubtaskCard({
           onChangeText={(text) => onUpdate(subtask.id, 'title', text)}
         />
         <TouchableOpacity onPress={() => setStatusPickerVisible(true)}>
-          <View style={[styles.statusBadge, { backgroundColor: TASK_STATUS_COLORS[subtask.status].bg }]}>
-            <Text style={[styles.statusText, { color: TASK_STATUS_COLORS[subtask.status].text }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: TASK_STATUS_COLORS[subtask.status].bg },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: TASK_STATUS_COLORS[subtask.status].text },
+              ]}
+            >
               {subtask.status}
             </Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => onRemove(subtask.id)} style={styles.deleteBtn}>
+        <TouchableOpacity
+          onPress={() => onRemove(subtask.id)}
+          style={styles.deleteBtn}
+        >
           <Ionicons name="close" size={18} color="#666" />
         </TouchableOpacity>
       </View>
@@ -94,7 +119,11 @@ export function SubtaskCard({
       <View style={styles.stTagContainer}>
         <Text style={styles.label}>{subtaskTagsLabel}</Text>
         <View style={{ marginTop: 8 }}>
-          <TagDisplayRow tags={subtask.tags} onEdit={() => onTagsEdit(subtask.id)} tagGroupColors={tagGroupColors} />
+          <TagDisplayRow
+            tags={subtask.tags}
+            onEdit={() => onTagsEdit(subtask.id)}
+            tagGroupColors={tagGroupColors}
+          />
         </View>
       </View>
 
@@ -109,7 +138,10 @@ export function SubtaskCard({
           style={styles.modalOverlay}
           onPress={() => setStatusPickerVisible(false)}
         >
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={styles.modalContent}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Status</Text>
               <TouchableOpacity onPress={() => setStatusPickerVisible(false)}>
@@ -127,13 +159,23 @@ export function SubtaskCard({
                       { backgroundColor: TASK_STATUS_COLORS[statusOption].bg },
                       isSelected && styles.statusOptionSelected,
                     ]}
-                  onPress={() => {
-                    console.log('[Status Change] Subtask ID:', subtask.id, 'New Status:', statusOption);
-                    onUpdate(subtask.id, 'status', statusOption);
-                    setStatusPickerVisible(false);
-                  }}
+                    onPress={() => {
+                      console.log(
+                        '[Status Change] Subtask ID:',
+                        subtask.id,
+                        'New Status:',
+                        statusOption
+                      );
+                      onUpdate(subtask.id, 'status', statusOption);
+                      setStatusPickerVisible(false);
+                    }}
                   >
-                    <Text style={[styles.statusOptionText, { color: TASK_STATUS_COLORS[statusOption].text }]}>
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        { color: TASK_STATUS_COLORS[statusOption].text },
+                      ]}
+                    >
                       {statusOption}
                     </Text>
                   </TouchableOpacity>
@@ -247,4 +289,3 @@ const styles = StyleSheet.create({
     borderColor: '#2196f3',
   },
 });
-

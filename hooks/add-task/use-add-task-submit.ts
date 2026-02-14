@@ -5,7 +5,11 @@ import { post, patch, ApiClientError, get } from '@/services/api/client';
 import { type LocalSubTask } from '@/types/add-task';
 import { type TaskStatus } from '@/types/task-status';
 import { TASK_SCREEN_STRINGS } from '@/constants/strings/tasks';
-import { buildMainTaskPayload, buildSubtaskPayload, isExistingSubtask } from '@/utils/add-task/task-payload';
+import {
+  buildMainTaskPayload,
+  buildSubtaskPayload,
+  isExistingSubtask,
+} from '@/utils/add-task/task-payload';
 import { calculateTotalTime } from '@/utils/add-task/time-calculation';
 import type { TagGroupResponse } from '@/hooks/tasks/use-tag-groups';
 import type { TagResponse } from '@/hooks/tasks/use-tags';
@@ -32,7 +36,10 @@ export function useAddTaskSubmit(
     console.log('[useAddTaskSubmit] handleSubmit called');
     if (!mainTitle.trim()) {
       console.log('[useAddTaskSubmit] Validation failed: mainTitle is empty');
-      Alert.alert(TASK_SCREEN_STRINGS.addTask.alerts.errorTitle, TASK_SCREEN_STRINGS.addTask.alerts.errorMessage);
+      Alert.alert(
+        TASK_SCREEN_STRINGS.addTask.alerts.errorTitle,
+        TASK_SCREEN_STRINGS.addTask.alerts.errorMessage
+      );
       return;
     }
 
@@ -58,16 +65,23 @@ export function useAddTaskSubmit(
 
       for (const group of tagGroups) {
         try {
-          const groupTags = await get<TagResponse[]>(`/api/tasks/tag-groups/${group.id}/tags`);
+          const groupTags = await get<TagResponse[]>(
+            `/api/tasks/tag-groups/${group.id}/tags`
+          );
           if (Array.isArray(groupTags)) {
             allTags.push(...groupTags);
           }
         } catch (err) {
-          console.error(`[useAddTaskSubmit] Failed to fetch tags for group ${group.id}:`, err);
+          console.error(
+            `[useAddTaskSubmit] Failed to fetch tags for group ${group.id}:`,
+            err
+          );
         }
       }
 
-      const buildTagIdsFromSelection = (selection: TaskTags | undefined): string[] => {
+      const buildTagIdsFromSelection = (
+        selection: TaskTags | undefined
+      ): string[] => {
         if (!selection) return [];
         const selectionGroups = selection.tagGroups || {};
         const groupsMap = new Map<string, TagGroupResponse>();
@@ -109,30 +123,48 @@ export function useAddTaskSubmit(
       const mainSelection = mainTags as TaskTags | undefined;
       const mainGroups = mainSelection?.tagGroups || {};
       const { Category, Priority, ...restMainGroups } = mainGroups;
-      (mainTaskPayload as any).tag_ids = buildTagIdsFromSelection({ tagGroups: restMainGroups } as TaskTags);
+      (mainTaskPayload as any).tag_ids = buildTagIdsFromSelection({
+        tagGroups: restMainGroups,
+      } as TaskTags);
 
       if (isEditMode && taskId) {
         // Update existing task
-        console.log(`[useAddTaskSubmit] Updating existing task (ID: ${taskId}) to backend`);
+        console.log(
+          `[useAddTaskSubmit] Updating existing task (ID: ${taskId}) to backend`
+        );
         await patch(`/api/tasks/${taskId}`, mainTaskPayload);
         console.log('[useAddTaskSubmit] Task updated successfully');
 
         // Update subtasks (including tag_ids)
         if (subtasks.length > 0) {
-          console.log(`[useAddTaskSubmit] Updating ${subtasks.length} subtasks to backend`);
+          console.log(
+            `[useAddTaskSubmit] Updating ${subtasks.length} subtasks to backend`
+          );
           const subtaskPromises = subtasks.map(async (sub) => {
             const subtaskPayload = buildSubtaskPayload(sub);
-            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(sub.tags);
-            console.log(`[useAddTaskSubmit] Subtask payload for ${sub.id}:`, subtaskPayload);
+            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(
+              sub.tags
+            );
+            console.log(
+              `[useAddTaskSubmit] Subtask payload for ${sub.id}:`,
+              subtaskPayload
+            );
 
             if (isExistingSubtask(sub.id)) {
               // Update existing subtask
-              console.log(`[useAddTaskSubmit] Updating existing subtask (ID: ${sub.id})`);
+              console.log(
+                `[useAddTaskSubmit] Updating existing subtask (ID: ${sub.id})`
+              );
               await patch(`/api/tasks/subtasks/${sub.id}`, subtaskPayload);
             } else {
               // Create new subtask
-              console.log(`[useAddTaskSubmit] Creating new subtask (temp ID: ${sub.id}) for task ${taskId}`);
-              const created = await post<{ id: string; [key: string]: unknown }>('/api/tasks/subtasks', {
+              console.log(
+                `[useAddTaskSubmit] Creating new subtask (temp ID: ${sub.id}) for task ${taskId}`
+              );
+              const created = await post<{
+                id: string;
+                [key: string]: unknown;
+              }>('/api/tasks/subtasks', {
                 ...subtaskPayload,
                 task_id: taskId,
               });
@@ -145,18 +177,31 @@ export function useAddTaskSubmit(
       } else {
         // Create new task
         console.log('[useAddTaskSubmit] Creating new task in backend');
-        const mainTaskResponse = await post<{ id: string; [key: string]: unknown }>('/api/tasks/', mainTaskPayload);
+        const mainTaskResponse = await post<{
+          id: string;
+          [key: string]: unknown;
+        }>('/api/tasks/', mainTaskPayload);
         const mainTaskId = mainTaskResponse.id;
-        console.log('[useAddTaskSubmit] Task created successfully with ID:', mainTaskId);
+        console.log(
+          '[useAddTaskSubmit] Task created successfully with ID:',
+          mainTaskId
+        );
 
         // Create subtasks if any (including tag_ids)
         if (subtasks.length > 0) {
-          console.log(`[useAddTaskSubmit] Creating ${subtasks.length} subtasks in backend`);
+          console.log(
+            `[useAddTaskSubmit] Creating ${subtasks.length} subtasks in backend`
+          );
           const subtaskPromises = subtasks.map(async (sub) => {
             const subtaskPayload = buildSubtaskPayload(sub, mainTaskId);
-            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(sub.tags);
+            (subtaskPayload as any).tag_ids = buildTagIdsFromSelection(
+              sub.tags
+            );
             console.log('[useAddTaskSubmit] Creating subtask:', subtaskPayload);
-            await post<{ id: string; [key: string]: unknown }>('/api/tasks/subtasks', subtaskPayload);
+            await post<{ id: string; [key: string]: unknown }>(
+              '/api/tasks/subtasks',
+              subtaskPayload
+            );
           });
 
           await Promise.all(subtaskPromises);
@@ -168,7 +213,10 @@ export function useAddTaskSubmit(
       console.log('[useAddTaskSubmit] Submission complete, navigating back');
       router.back();
     } catch (error) {
-      console.error(`[useAddTaskSubmit] ${isEditMode ? 'Update' : 'Create'} Task API error:`, error);
+      console.error(
+        `[useAddTaskSubmit] ${isEditMode ? 'Update' : 'Create'} Task API error:`,
+        error
+      );
       let errorMessage = TASK_SCREEN_STRINGS.addTask.alerts.errorMessage;
       if (error instanceof ApiClientError) {
         errorMessage = error.message || errorMessage;

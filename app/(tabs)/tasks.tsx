@@ -113,7 +113,11 @@ export default function TasksScreen() {
   };
 
   // Date change handler wrapper
-  const handleDateChange = (taskId: string, event: any, selectedDate?: Date) => {
+  const handleDateChange = (
+    taskId: string,
+    event: any,
+    selectedDate?: Date
+  ) => {
     handleDateChangeBase(taskId, event, selectedDate, (id, date) => {
       updateTaskField(id, 'deadline', date);
     });
@@ -144,18 +148,22 @@ export default function TasksScreen() {
 
   const renderItem = ({ item }: { item: TaskItemWithSubtasks }) => {
     const isExpanded = expandedIds.has(item.id);
-    const isTitleHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'title';
-    const isDescHovered = hoveredField?.taskId === item.id && hoveredField?.field === 'description';
+    const isTitleHovered =
+      hoveredField?.taskId === item.id && hoveredField?.field === 'title';
+    const isDescHovered =
+      hoveredField?.taskId === item.id && hoveredField?.field === 'description';
 
     // Progress calculation
     const totalSub = item.subtasks.length;
-    const completedSub = item.subtasks.filter((s) => isStatusComplete(s.status)).length;
+    const completedSub = item.subtasks.filter((s) =>
+      isStatusComplete(s.status)
+    ).length;
     const hasProgressFromSubtasks = totalSub > 0;
     const progressPercent = hasProgressFromSubtasks
       ? (completedSub / totalSub) * 100
       : isStatusComplete(item.status) || item.isCompleted
-      ? 100
-      : 0;
+        ? 100
+        : 0;
     const shouldShowProgress = hasProgressFromSubtasks;
 
     // Only show hover if no subtask is hovered
@@ -195,18 +203,35 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={tasksStyles.container}>
-      <View style={[tasksStyles.header, { padding: layout.screenHeaderPadding }]}>
-        <Text style={[tasksStyles.headerTitle, { fontSize: layout.headerTitleSize }]}>
+      <View
+        style={[tasksStyles.header, { padding: layout.screenHeaderPadding }]}
+      >
+        <Text
+          style={[
+            tasksStyles.headerTitle,
+            { fontSize: layout.headerTitleSize },
+          ]}
+        >
           {TASK_SCREEN_STRINGS.headerTitle}
         </Text>
       </View>
       {loading && (
-        <View style={[tasksStyles.infoBanner, { marginHorizontal: layout.listPadding }]}>
+        <View
+          style={[
+            tasksStyles.infoBanner,
+            { marginHorizontal: layout.listPadding },
+          ]}
+        >
           <Text style={tasksStyles.infoText}>Loading tasks…</Text>
         </View>
       )}
       {error && (
-        <View style={[tasksStyles.errorBanner, { marginHorizontal: layout.listPadding }]}>
+        <View
+          style={[
+            tasksStyles.errorBanner,
+            { marginHorizontal: layout.listPadding },
+          ]}
+        >
           <Text style={tasksStyles.errorText}>{error}</Text>
         </View>
       )}
@@ -216,9 +241,14 @@ export default function TasksScreen() {
         renderItem={renderItem}
         contentContainerStyle={[
           tasksStyles.listContent,
-          { padding: layout.listPadding, flexGrow: isEmptyState ? 1 : undefined },
+          {
+            padding: layout.listPadding,
+            flexGrow: isEmptyState ? 1 : undefined,
+          },
         ]}
-        ListEmptyComponent={isEmptyState ? <TasksEmptyState onAddTask={handleAddTask} /> : null}
+        ListEmptyComponent={
+          isEmptyState ? <TasksEmptyState onAddTask={handleAddTask} /> : null
+        }
         keyboardShouldPersistTaps="handled"
       />
       <TouchableOpacity
@@ -261,7 +291,9 @@ export default function TasksScreen() {
         newTagGroupName={newTagGroupName}
         selectTagsTitle={TASK_SCREEN_STRINGS.addTask.selectTagsTitle}
         newTagPlaceholder={TASK_SCREEN_STRINGS.addTask.newTagPlaceholder}
-        newTagGroupPlaceholder={TASK_SCREEN_STRINGS.addTask.newTagGroupPlaceholder}
+        newTagGroupPlaceholder={
+          TASK_SCREEN_STRINGS.addTask.newTagGroupPlaceholder
+        }
         confirmButtonText={TASK_SCREEN_STRINGS.addTask.confirmButton}
         onClose={closeTagModal}
         onToggleTag={toggleTagInGroup}
@@ -288,7 +320,9 @@ export default function TasksScreen() {
             key={taskId}
             visible={isOpen}
             date={taskDeadline}
-            onDateChange={(event, date) => handleDateChange(taskId, event, date)}
+            onDateChange={(event, date) =>
+              handleDateChange(taskId, event, date)
+            }
             onDone={() => handleDatePickerDone(taskId)}
             onCancel={() => handleDatePickerCancel(taskId)}
             minimumDate={new Date()}

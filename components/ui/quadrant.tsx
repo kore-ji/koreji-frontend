@@ -13,26 +13,21 @@ interface QuadrantProps {
 
 /**
  * Quadrant - A single quadrant component (1/4 circle)
- * 
+ *
  * Renders one quarter circle in a square container.
  * Can be used to build up a full 4-quadrant loader animation.
- * 
+ *
  * @example
  * ```tsx
  * import { Quadrant } from '@/components/ui/quadrant';
- * 
+ *
  * <Quadrant size={100} position="tl" color="#2196F3" />
  * ```
  */
-export function Quadrant({
-  size,
-  position,
-  color = '#2196F3',
-}: QuadrantProps) {
-
+export function Quadrant({ size, position, color = '#2196F3' }: QuadrantProps) {
   const getPath = () => {
     const radius = size; // Radius for quarter circle arc
-    
+
     switch (position) {
       case 'tl': // Top-left quadrant - quarter circle
         // Quarter circle centered at top-left corner (0,0)
@@ -68,4 +63,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

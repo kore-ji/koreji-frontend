@@ -10,7 +10,11 @@ interface UseTaskCompletionParams {
   elapsedTime?: string;
 }
 
-export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: UseTaskCompletionParams) {
+export function useTaskCompletion({
+  task_id,
+  progressPercent,
+  elapsedTime,
+}: UseTaskCompletionParams) {
   const router = useRouter();
   const { task, loading, error, fetchTask } = useTask();
   const [parentTask, setParentTask] = useState<ApiTaskResponse | null>(null);
@@ -26,7 +30,10 @@ export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: Use
       get<ApiTaskResponse>(`/api/tasks/${task.parent_id}`)
         .then((parent) => {
           setParentTask(parent);
-          console.log('[Task Completion] Loaded parent task:', { id: parent.id, title: parent.title });
+          console.log('[Task Completion] Loaded parent task:', {
+            id: parent.id,
+            title: parent.title,
+          });
         })
         .catch((err) => {
           console.error('[Task Completion] Failed to load parent task:', err);
@@ -40,12 +47,21 @@ export function useTaskCompletion({ task_id, progressPercent, elapsedTime }: Use
   // Get progress from task API response (progress is calculated from subtasks)
   // For subtasks, use parent's progress; for main tasks, use their own progress
   const progressTask = task?.parent_id && parentTask ? parentTask : task;
-  const progressFromTask = progressTask?.progress !== undefined ? Math.round(progressTask.progress) : null;
-  const parsedProgress = progressFromTask ?? (progressPercent ? parseInt(progressPercent, 10) : Number.NaN);
+  const progressFromTask =
+    progressTask?.progress !== undefined
+      ? Math.round(progressTask.progress)
+      : null;
+  const parsedProgress =
+    progressFromTask ??
+    (progressPercent ? parseInt(progressPercent, 10) : Number.NaN);
   const progress = Number.isFinite(parsedProgress) ? parsedProgress : 100;
 
-  const parsedElapsedSeconds = elapsedTime ? parseInt(elapsedTime, 10) : Number.NaN;
-  const safeElapsedSeconds = Number.isFinite(parsedElapsedSeconds) ? parsedElapsedSeconds : 0;
+  const parsedElapsedSeconds = elapsedTime
+    ? parseInt(elapsedTime, 10)
+    : Number.NaN;
+  const safeElapsedSeconds = Number.isFinite(parsedElapsedSeconds)
+    ? parsedElapsedSeconds
+    : 0;
   const elapsedMinutes = Math.max(0, Math.round(safeElapsedSeconds / 60));
 
   // taskTitle: The completed task/subtask's title (the one that was actually finished)

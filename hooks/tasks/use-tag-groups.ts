@@ -30,7 +30,9 @@ export function useTagGroups() {
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.type === ApiErrorType.CONFIG) {
-          setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+          setError(
+            'Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.'
+          );
         } else {
           setError(err.message);
         }
@@ -43,38 +45,54 @@ export function useTagGroups() {
     }
   }, []);
 
-  const createTagGroup = useCallback(async (
-    name: string,
-    isSingleSelect?: boolean,
-    allowAddTags?: boolean
-  ): Promise<TagGroupResponse | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload: { name: string; is_single_select?: boolean; allow_add_tag?: boolean } = { name };
-      if (isSingleSelect !== undefined) {
-        payload.is_single_select = isSingleSelect;
+  const createTagGroup = useCallback(
+    async (
+      name: string,
+      isSingleSelect?: boolean,
+      allowAddTags?: boolean
+    ): Promise<TagGroupResponse | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const payload: {
+          name: string;
+          is_single_select?: boolean;
+          allow_add_tag?: boolean;
+        } = { name };
+        if (isSingleSelect !== undefined) {
+          payload.is_single_select = isSingleSelect;
+        }
+        if (allowAddTags !== undefined) {
+          payload.allow_add_tag = allowAddTags; // Backend uses singular "allow_add_tag"
+        }
+        console.log(
+          '[use-tag-groups] Creating tag group with payload:',
+          payload
+        );
+        const newGroup = await post<TagGroupResponse>(
+          '/api/tasks/tag-groups',
+          payload
+        );
+        console.log(
+          '[use-tag-groups] Tag group created successfully:',
+          newGroup
+        );
+        setTagGroups((prev) => [...prev, newGroup]);
+        return newGroup;
+      } catch (err) {
+        let errorMessage = 'Failed to create tag group.';
+        if (err instanceof ApiClientError) {
+          errorMessage = err.message || errorMessage;
+        }
+        setError(errorMessage);
+        console.error('[use-tag-groups] Create Tag Group Error:', err);
+        return null;
+      } finally {
+        setLoading(false);
       }
-      if (allowAddTags !== undefined) {
-        payload.allow_add_tag = allowAddTags; // Backend uses singular "allow_add_tag"
-      }
-      console.log('[use-tag-groups] Creating tag group with payload:', payload);
-      const newGroup = await post<TagGroupResponse>('/api/tasks/tag-groups', payload);
-      console.log('[use-tag-groups] Tag group created successfully:', newGroup);
-      setTagGroups((prev) => [...prev, newGroup]);
-      return newGroup;
-    } catch (err) {
-      let errorMessage = 'Failed to create tag group.';
-      if (err instanceof ApiClientError) {
-        errorMessage = err.message || errorMessage;
-      }
-      setError(errorMessage);
-      console.error('[use-tag-groups] Create Tag Group Error:', err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   return {
     tagGroups,
