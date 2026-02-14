@@ -21,7 +21,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/bottom-tabs": "^7.4.0",
-    "@react-navigation/elements": "^2.6.3",
+    "@react-navigation/elements": "^2.9.5",
     "@react-navigation/native": "^7.1.28",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
@@ -41,10 +41,10 @@
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0",
-    "react-native-svg": "^15.12.1",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "^15.15.3",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.5.1"
+    "react-native-worklets": "0.7.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -59,7 +59,9 @@
   "pnpm": {
     "overrides": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "glob": "^13.0.0",
+      "rimraf": "^5.0.0"
     }
   },
   "private": true,
