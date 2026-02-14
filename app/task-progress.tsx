@@ -62,12 +62,13 @@ export default function TaskProgressScreen() {
       // Use setTimeout to ensure DOM is ready
       const timeoutId = setTimeout(() => {
         try {
-          // @ts-ignore - web only: access native element
-          const element =
-            containerRef.current?.nativeElement || containerRef.current;
-          if (element && typeof element.focus === 'function') {
-            element.focus();
-          }
+          const ref = containerRef.current as
+            | (View & { nativeElement?: { focus?: () => void } })
+            | null;
+          const element = (ref?.nativeElement ?? ref) as
+            | { focus?: () => void }
+            | null;
+          element?.focus?.();
         } catch {
           // Ignore focus errors
         }
