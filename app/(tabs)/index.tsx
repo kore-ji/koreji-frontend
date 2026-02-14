@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -11,9 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecordFilters } from '@/hooks/use-record-filters';
+import { useTasks } from '@/hooks/tasks/use-tasks';
 import { HOME_SCREEN_STRINGS } from '@/constants/strings/home';
+import { mapTasksToSimple } from '@/components/ui/simple-task-list/map-task-to-simple';
 import { FilterDropdown } from '@/components/ui/filter-dropdown';
 import { useRouter } from 'expo-router';
+import { TasksBottomSheet } from '@/components/ui/simple-task-list';
 
 const NO_SELECT = 'No select';
 
@@ -24,6 +27,8 @@ export default function HomeScreen() {
   const [minutes, setMinutes] = useState(20);
 
   const { modes, places, tools, loading: filtersLoading } = useRecordFilters();
+  const { tasks: apiTasks } = useTasks();
+  const simpleTasks = useMemo(() => mapTasksToSimple(apiTasks), [apiTasks]);
 
   const [selectedMode, setSelectedMode] = useState<string>(NO_SELECT);
   const [selectedPlace, setSelectedPlace] = useState<string>(NO_SELECT);
@@ -113,7 +118,7 @@ export default function HomeScreen() {
   const toolOptions = [NO_SELECT, ...tools];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -237,6 +242,9 @@ export default function HomeScreen() {
           <Text style={styles.actionButtonText}>{actions.recommendButton}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Tasks Bottom Sheet */}
+      <TasksBottomSheet tasks={simpleTasks} />
     </SafeAreaView>
   );
 }

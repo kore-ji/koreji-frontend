@@ -101,21 +101,31 @@ test.describe('Home screen timer', () => {
     );
     const MAX_INPUT_LENGTH = 30;
 
-    // Find and click the Place filter dropdown
-    const placeDropdown = page.getByTestId('filter-dropdown-place');
-    await expect(placeDropdown).toBeVisible();
+    // Wait for filters to be ready (dropdown appears after filtersLoading becomes false)
+    const placeDropdownLocator = page.getByTestId('filter-dropdown-place');
+    await expect(placeDropdownLocator).toBeVisible();
+    await expect(placeDropdownLocator).toBeEnabled();
 
-    // Wait for element to be actionable before clicking
-    await expect(placeDropdown).toBeEnabled();
-
-    // Click and wait for the click to complete
-    await placeDropdown.click();
-
-    // Wait for modal to appear (container is reliable; title text used as fallback)
-    const modal = page.getByTestId('filter-modal');
     const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
-    await expect(modal).toBeVisible({ timeout: 15000 });
-    await expect(modal.getByText(expectedModalTitle)).toBeVisible();
+    const modalTitleLocator = page.getByText(expectedModalTitle);
+
+    // Open modal: click dropdown and wait for modal. Use fresh locator each time to avoid
+    // "Element is not attached to the DOM" when the filters section re-renders. Retry up to 3 times.
+    const openModalTimeout = 5000;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await page.getByTestId('filter-dropdown-place').click();
+      const opened = await modalTitleLocator
+        .waitFor({ state: 'visible', timeout: openModalTimeout })
+        .then(() => true)
+        .catch(() => false);
+      if (opened) break;
+      if (attempt === 3) {
+        await expect(modalTitleLocator).toBeVisible({ timeout: 0 });
+      }
+    }
+
+    const modal = page.getByTestId('filter-modal');
+    await expect(modal).toBeVisible();
 
     // Select "Other" option within the modal to avoid matching other UI
     const otherOption = modal.getByText('Other');
@@ -161,7 +171,9 @@ test.describe('Home screen timer', () => {
     // Verify modal is closed - wait for it to disappear
     await expect(modal).not.toBeVisible({ timeout: 3000 });
 
-    // Verify the custom value is displayed in the dropdown
-    await expect(placeDropdown).toContainText(textAtLimit);
+    // Verify the custom value is displayed in the dropdown (fresh locator after modal close)
+    await expect(page.getByTestId('filter-dropdown-place')).toContainText(
+      textAtLimit
+    );
   });
 });
