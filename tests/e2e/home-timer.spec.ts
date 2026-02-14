@@ -111,11 +111,11 @@ test.describe('Home screen timer', () => {
     // Click and wait for the click to complete
     await placeDropdown.click();
 
-    // Wait for modal to appear - rely on Playwright's built-in waiting
-    // for the modal title text instead of custom polling logic.
-    const modalTitle = page.getByTestId('filter-modal-title');
-    // Verify the text content - this also acts as an explicit wait
-    await expect(modalTitle).toHaveText('Select Place', { timeout: 15000 });
+    // Wait for modal to appear by visible title text (more resilient than testID
+    // in CI where the modal portal may render testID inconsistently).
+    const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
+    const modalTitle = page.getByText(expectedModalTitle);
+    await expect(modalTitle).toBeVisible({ timeout: 15000 });
 
     // Now wait for the "Other" option to be visible within the modal
     const otherOption = page.getByText('Other');
