@@ -101,19 +101,19 @@ test.describe('Home screen timer', () => {
     );
     const MAX_INPUT_LENGTH = 30;
 
-    // Find the Place filter dropdown and ensure it's in view (CI can have viewport/scroll issues)
-    const placeDropdown = page.getByTestId('filter-dropdown-place');
-    await expect(placeDropdown).toBeVisible();
-    await expect(placeDropdown).toBeEnabled();
-    await placeDropdown.scrollIntoViewIfNeeded();
+    // Wait for filters to be ready (dropdown appears after filtersLoading becomes false)
+    const placeDropdownLocator = page.getByTestId('filter-dropdown-place');
+    await expect(placeDropdownLocator).toBeVisible();
+    await expect(placeDropdownLocator).toBeEnabled();
 
     const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
     const modalTitleLocator = page.getByText(expectedModalTitle);
 
-    // Open modal: click dropdown and wait for modal. Retry up to 3 times for CI flakiness.
+    // Open modal: click dropdown and wait for modal. Use fresh locator each time to avoid
+    // "Element is not attached to the DOM" when the filters section re-renders. Retry up to 3 times.
     const openModalTimeout = 5000;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      await placeDropdown.click();
+      await page.getByTestId('filter-dropdown-place').click();
       const opened = await modalTitleLocator
         .waitFor({ state: 'visible', timeout: openModalTimeout })
         .then(() => true)
@@ -171,7 +171,9 @@ test.describe('Home screen timer', () => {
     // Verify modal is closed - wait for it to disappear
     await expect(modal).not.toBeVisible({ timeout: 3000 });
 
-    // Verify the custom value is displayed in the dropdown
-    await expect(placeDropdown).toContainText(textAtLimit);
+    // Verify the custom value is displayed in the dropdown (fresh locator after modal close)
+    await expect(page.getByTestId('filter-dropdown-place')).toContainText(
+      textAtLimit
+    );
   });
 });
