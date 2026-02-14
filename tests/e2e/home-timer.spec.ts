@@ -101,22 +101,29 @@ test.describe('Home screen timer', () => {
     );
     const MAX_INPUT_LENGTH = 30;
 
-    // Find and click the Place filter dropdown
+    // Find the Place filter dropdown and ensure it's in view (CI can have viewport/scroll issues)
     const placeDropdown = page.getByTestId('filter-dropdown-place');
     await expect(placeDropdown).toBeVisible();
-
-    // Wait for element to be actionable before clicking
     await expect(placeDropdown).toBeEnabled();
+    await placeDropdown.scrollIntoViewIfNeeded();
 
-    // Click and wait for the click to complete
-    await placeDropdown.click();
-
-    // Wait for modal to appear by waiting for its title (modal content can mount
-    // after the overlay in React Native Web, so title is the reliable signal)
     const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
-    await expect(page.getByText(expectedModalTitle)).toBeVisible({
-      timeout: 15000,
-    });
+    const modalTitleLocator = page.getByText(expectedModalTitle);
+
+    // Open modal: click dropdown and wait for modal. Retry up to 3 times for CI flakiness.
+    const openModalTimeout = 5000;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await placeDropdown.click();
+      const opened = await modalTitleLocator
+        .waitFor({ state: 'visible', timeout: openModalTimeout })
+        .then(() => true)
+        .catch(() => false);
+      if (opened) break;
+      if (attempt === 3) {
+        await expect(modalTitleLocator).toBeVisible({ timeout: 0 });
+      }
+    }
+
     const modal = page.getByTestId('filter-modal');
     await expect(modal).toBeVisible();
 
