@@ -53,7 +53,7 @@ jobs:
       - name: Commit and push formatted files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'style: apply Prettier formatting'
+          commit_message: "style: apply Prettier formatting"
 
   quality-checks:
     runs-on: ubuntu-latest
@@ -110,9 +110,16 @@ jobs:
           echo $! > expo_web.pid
 
       - name: Wait for Expo web server
+        id: wait-expo
         if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && steps.e2e-changes.outputs.e2e == 'true' }}
         run: |
           timeout 90 bash -c 'until curl -sf http://127.0.0.1:8081 >/dev/null; do sleep 3; done'
+
+      - name: Expo web server log (on wait failure)
+        if: failure() && steps.wait-expo.outcome == 'failure'
+        run: |
+          echo "---- Expo web server log (wait timed out or failed) ----"
+          cat /tmp/expo-web.log || true
 
       - name: Run Playwright suite
         if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && steps.e2e-changes.outputs.e2e == 'true' }}
