@@ -1,7 +1,10 @@
 import { type TaskItem, type ApiTaskResponse } from '@/types/tasks';
 import { mapStatusFromBackend } from '@/utils/mapping/status';
 
-export const flattenTasks = (items: ApiTaskResponse[], parentId: string | null = null): TaskItem[] => {
+export const flattenTasks = (
+  items: ApiTaskResponse[],
+  parentId: string | null = null
+): TaskItem[] => {
   const result: TaskItem[] = [];
   items.forEach((t) => {
     const taskId = t.id;

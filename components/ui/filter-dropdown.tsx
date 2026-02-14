@@ -47,7 +47,7 @@ export function FilterDropdown<T extends string>({
   const selectedValues = multiple
     ? (selectedValue as T[])
     : ([selectedValue].filter(Boolean) as T[]);
-  
+
   const isOtherSelected = !multiple && selectedValue === 'Other';
 
   const handleOtherValueChange = (text: string) => {
@@ -112,17 +112,26 @@ export function FilterDropdown<T extends string>({
   return (
     <View style={styles.filterItem}>
       <Text style={styles.filterLabel}>{label}</Text>
-      <Pressable 
-        style={styles.filterValueBox} 
+      <Pressable
+        style={styles.filterValueBox}
         onPress={() => setIsOpen(true)}
         testID={`filter-dropdown-${label.toLowerCase()}`}
       >
         <View style={styles.textContainer}>
-          <Text style={styles.filterValue} numberOfLines={2} ellipsizeMode="tail">
+          <Text
+            style={styles.filterValue}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {getDisplayText()}
           </Text>
         </View>
-        <Ionicons name="chevron-down" size={16} color="#666666" style={styles.chevron} />
+        <Ionicons
+          name="chevron-down"
+          size={16}
+          color="#666666"
+          style={styles.chevron}
+        />
       </Pressable>
 
       <Modal
@@ -140,9 +149,15 @@ export function FilterDropdown<T extends string>({
             }
           }}
         >
-          <Pressable onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={styles.modalContent}
+            testID="filter-modal"
+          >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} testID="filter-modal-title">Select {label}</Text>
+              <Text style={styles.modalTitle} testID="filter-modal-title">
+                Select {label}
+              </Text>
               <Pressable onPress={() => setIsOpen(false)}>
                 <Ionicons name="close" size={24} color="#333333" />
               </Pressable>
@@ -158,7 +173,10 @@ export function FilterDropdown<T extends string>({
                 return (
                   <View>
                     <TouchableOpacity
-                      style={[styles.optionItem, isSelected && styles.optionItemSelected]}
+                      style={[
+                        styles.optionItem,
+                        isSelected && styles.optionItemSelected,
+                      ]}
                       onPress={() => handleSelect(item)}
                     >
                       <Text
@@ -177,30 +195,36 @@ export function FilterDropdown<T extends string>({
                         />
                       )}
                     </TouchableOpacity>
-                    {isOther && isSelected && !multiple && onOtherValueChange && (
-                      <View style={styles.otherInputContainer}>
-                        <TextInput
-                          style={[
-                            styles.otherInput,
-                            isAtLimit && styles.otherInputWarning,
-                          ]}
-                          placeholder="Enter place..."
-                          placeholderTextColor="#999999"
-                          value={otherOptionValue}
-                          onChangeText={handleOtherValueChange}
-                          maxLength={maxInputLength}
-                          autoFocus={false}
-                          testID="filter-other-input"
-                        />
-                        {isAtLimit && (
-                          <View style={styles.inputInfoContainer}>
-                            <Text style={styles.inputWarningText} testID="input-warning-text">
-                              Maximum length reached
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
+                    {isOther &&
+                      isSelected &&
+                      !multiple &&
+                      onOtherValueChange && (
+                        <View style={styles.otherInputContainer}>
+                          <TextInput
+                            style={[
+                              styles.otherInput,
+                              isAtLimit && styles.otherInputWarning,
+                            ]}
+                            placeholder="Enter place..."
+                            placeholderTextColor="#999999"
+                            value={otherOptionValue}
+                            onChangeText={handleOtherValueChange}
+                            maxLength={maxInputLength}
+                            autoFocus={false}
+                            testID="filter-other-input"
+                          />
+                          {isAtLimit && (
+                            <View style={styles.inputInfoContainer}>
+                              <Text
+                                style={styles.inputWarningText}
+                                testID="input-warning-text"
+                              >
+                                Maximum length reached
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
                   </View>
                 );
               }}
@@ -211,20 +235,26 @@ export function FilterDropdown<T extends string>({
                       <View style={styles.newPlaceInputContainer}>
                         <TextInput
                           style={styles.newPlaceInput}
-                          placeholder={onAddNew.placeholder || "New item..."}
+                          placeholder={onAddNew.placeholder || 'New item...'}
                           value={onAddNew.inputValue}
                           onChangeText={onAddNew.onInputChange}
                           autoFocus
                           onSubmitEditing={onAddNew.onSave}
                         />
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.savePlaceBtn}
                           onPress={onAddNew.onSave}
                           disabled={!onAddNew.inputValue.trim()}
                         >
-                          <Ionicons name="checkmark" size={16} color={onAddNew.inputValue.trim() ? "#4CAF50" : "#ccc"} />
+                          <Ionicons
+                            name="checkmark"
+                            size={16}
+                            color={
+                              onAddNew.inputValue.trim() ? '#4CAF50' : '#ccc'
+                            }
+                          />
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.cancelPlaceBtn}
                           onPress={onAddNew.onCancel}
                         >
@@ -239,7 +269,12 @@ export function FilterDropdown<T extends string>({
                           onAddNew.onInputChange('__SHOW_INPUT__');
                         }}
                       >
-                        <Ionicons name="add" size={20} color="#666" style={{ marginRight: 8 }} />
+                        <Ionicons
+                          name="add"
+                          size={20}
+                          color="#666"
+                          style={{ marginRight: 8 }}
+                        />
                         <Text style={styles.addNewItemText}>Add New</Text>
                       </TouchableOpacity>
                     )}
@@ -252,7 +287,9 @@ export function FilterDropdown<T extends string>({
                 <Pressable
                   style={[
                     styles.doneButton,
-                    isOtherSelected && !otherOptionValue?.trim() && styles.doneButtonDisabled,
+                    isOtherSelected &&
+                      !otherOptionValue?.trim() &&
+                      styles.doneButtonDisabled,
                   ]}
                   onPress={() => setIsOpen(false)}
                   disabled={isOtherSelected && !otherOptionValue?.trim()}
@@ -261,7 +298,9 @@ export function FilterDropdown<T extends string>({
                   <Text
                     style={[
                       styles.doneButtonText,
-                      isOtherSelected && !otherOptionValue?.trim() && styles.doneButtonTextDisabled,
+                      isOtherSelected &&
+                        !otherOptionValue?.trim() &&
+                        styles.doneButtonTextDisabled,
                     ]}
                   >
                     Done
@@ -455,4 +494,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-

@@ -1,4 +1,10 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '@/utils/formatting/date';
 
@@ -34,7 +40,12 @@ export function TimeDeadlineRow({
       <View style={styles.timeDeadlineRow}>
         <View style={styles.timeFieldContainer}>
           <Text style={styles.fieldLabel}>{timeLabel}</Text>
-          <View style={[styles.stTimeContainer, isTimeReadOnly && styles.timeBoxDisabled]}>
+          <View
+            style={[
+              styles.stTimeContainer,
+              isTimeReadOnly && styles.timeBoxDisabled,
+            ]}
+          >
             <TextInput
               style={[styles.stTimeInput, isTimeReadOnly && { color: '#888' }]}
               keyboardType="numeric"
@@ -48,11 +59,24 @@ export function TimeDeadlineRow({
         </View>
         <View style={styles.deadlineFieldContainer}>
           <Text style={styles.fieldLabel}>{deadlineLabel}</Text>
-          <TouchableOpacity style={styles.deadlineContainer} onPress={onDeadlinePress}>
-            <Text style={[styles.deadlineInput, !deadline && styles.deadlinePlaceholder]}>
+          <TouchableOpacity
+            style={styles.deadlineContainer}
+            onPress={onDeadlinePress}
+          >
+            <Text
+              style={[
+                styles.deadlineInput,
+                !deadline && styles.deadlinePlaceholder,
+              ]}
+            >
               {deadline ? formatDate(deadline) : deadlinePlaceholder}
             </Text>
-            <Ionicons name="calendar-outline" size={16} color="#666" style={{ marginLeft: 4 }} />
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color="#666"
+              style={{ marginLeft: 4 }}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -122,4 +146,3 @@ const styles = StyleSheet.create({
     color: '#ccc',
   },
 });
-

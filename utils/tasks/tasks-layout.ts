@@ -15,12 +15,30 @@ export interface LayoutSizes {
   };
 }
 
-export function getLayoutSizes(responsive: ReturnType<typeof useResponsive>): LayoutSizes {
-  const cardHeaderPadding = responsive.isMobile ? 16 : responsive.isTablet ? 20 : 24;
-  const screenHeaderPadding = responsive.isMobile ? 20 : responsive.isTablet ? 24 : 32;
-  const taskTitleSize = responsive.isMobile ? 18 : responsive.isTablet ? 20 : 22;
+export function getLayoutSizes(
+  responsive: ReturnType<typeof useResponsive>
+): LayoutSizes {
+  const cardHeaderPadding = responsive.isMobile
+    ? 16
+    : responsive.isTablet
+      ? 20
+      : 24;
+  const screenHeaderPadding = responsive.isMobile
+    ? 20
+    : responsive.isTablet
+      ? 24
+      : 32;
+  const taskTitleSize = responsive.isMobile
+    ? 18
+    : responsive.isTablet
+      ? 20
+      : 22;
   const taskDescSize = responsive.isMobile ? 14 : responsive.isTablet ? 15 : 16;
-  const headerTitleSize = responsive.isMobile ? 24 : responsive.isTablet ? 26 : 28;
+  const headerTitleSize = responsive.isMobile
+    ? 24
+    : responsive.isTablet
+      ? 26
+      : 28;
   const listPadding = responsive.isMobile ? 16 : responsive.isTablet ? 24 : 32;
   const fabSize = responsive.isMobile ? 60 : responsive.isTablet ? 64 : 68;
   const fabIconSize = responsive.isMobile ? 32 : responsive.isTablet ? 34 : 36;

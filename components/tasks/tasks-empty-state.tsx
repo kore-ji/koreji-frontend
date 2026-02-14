@@ -10,10 +10,19 @@ export function TasksEmptyState({ onAddTask }: TasksEmptyStateProps) {
   return (
     <View style={tasksStyles.emptyStateContainer}>
       <View style={tasksStyles.emptyStateCard}>
-        <Text style={tasksStyles.emptyStateTitle}>{TASK_SCREEN_STRINGS.tasksList.emptyStateTitle}</Text>
-        <Text style={tasksStyles.emptyStateSubtitle}>{TASK_SCREEN_STRINGS.tasksList.emptyStateSubtitle}</Text>
-        <TouchableOpacity style={tasksStyles.emptyStateButton} onPress={onAddTask}>
-          <Text style={tasksStyles.emptyStateButtonText}>{TASK_SCREEN_STRINGS.tasksList.emptyStateAction}</Text>
+        <Text style={tasksStyles.emptyStateTitle}>
+          {TASK_SCREEN_STRINGS.tasksList.emptyStateTitle}
+        </Text>
+        <Text style={tasksStyles.emptyStateSubtitle}>
+          {TASK_SCREEN_STRINGS.tasksList.emptyStateSubtitle}
+        </Text>
+        <TouchableOpacity
+          style={tasksStyles.emptyStateButton}
+          onPress={onAddTask}
+        >
+          <Text style={tasksStyles.emptyStateButtonText}>
+            {TASK_SCREEN_STRINGS.tasksList.emptyStateAction}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

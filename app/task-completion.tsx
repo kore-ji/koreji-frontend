@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, ViewStyle } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,11 +45,13 @@ export default function TaskCompletionScreen() {
       // Use setTimeout to ensure DOM is ready
       const timeoutId = setTimeout(() => {
         try {
-          // @ts-ignore - web only: access native element
-          const element = containerRef.current?.nativeElement || containerRef.current;
-          if (element && typeof element.focus === 'function') {
-            element.focus();
-          }
+          const ref = containerRef.current as
+            | (View & { nativeElement?: { focus?: () => void } })
+            | null;
+          const element = (ref?.nativeElement ?? ref) as {
+            focus?: () => void;
+          } | null;
+          element?.focus?.();
         } catch {
           // Ignore focus errors
         }
@@ -73,8 +83,8 @@ export default function TaskCompletionScreen() {
   });
 
   return (
-    <SafeAreaView 
-      style={styles.container} 
+    <SafeAreaView
+      style={styles.container}
       edges={['top', 'bottom']}
       ref={containerRef}
       accessibilityViewIsModal={Platform.OS === 'web'}
@@ -147,7 +157,9 @@ export default function TaskCompletionScreen() {
                 <Ionicons
                   name="chevron-forward"
                   size={24}
-                  color={currentPage === TOTAL_PAGES - 1 ? '#AAAAAA' : '#1a1a1a'}
+                  color={
+                    currentPage === TOTAL_PAGES - 1 ? '#AAAAAA' : '#1a1a1a'
+                  }
                 />
               </View>
             </TouchableOpacity>
@@ -157,8 +169,13 @@ export default function TaskCompletionScreen() {
           <PaginationDots currentPage={currentPage} totalPages={TOTAL_PAGES} />
 
           {/* What's Next Button */}
-          <TouchableOpacity style={styles.whatsNextButton} onPress={handleWhatsNext}>
-            <Text style={styles.whatsNextButtonText}>{TASK_COMPLETION_STRINGS.whatsNext}</Text>
+          <TouchableOpacity
+            style={styles.whatsNextButton}
+            onPress={handleWhatsNext}
+          >
+            <Text style={styles.whatsNextButtonText}>
+              {TASK_COMPLETION_STRINGS.whatsNext}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

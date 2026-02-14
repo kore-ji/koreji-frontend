@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { TASK_STATUS_COLORS } from '@/constants/task-status';
 import { type TaskStatus } from '@/types/task-status';
 
@@ -12,14 +18,28 @@ interface StatusBadgeProps {
   };
 }
 
-export function StatusBadge({ status, onPress, mouseHandlers }: StatusBadgeProps) {
+export function StatusBadge({
+  status,
+  onPress,
+  mouseHandlers,
+}: StatusBadgeProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
       {...(Platform.OS === 'web' && mouseHandlers ? mouseHandlers : {})}
     >
-      <View style={[styles.statusBadge, { backgroundColor: TASK_STATUS_COLORS[status].bg }]}>
-        <Text style={[styles.statusText, { color: TASK_STATUS_COLORS[status].text }]}>
+      <View
+        style={[
+          styles.statusBadge,
+          { backgroundColor: TASK_STATUS_COLORS[status].bg },
+        ]}
+      >
+        <Text
+          style={[
+            styles.statusText,
+            { color: TASK_STATUS_COLORS[status].text },
+          ]}
+        >
           {status}
         </Text>
       </View>

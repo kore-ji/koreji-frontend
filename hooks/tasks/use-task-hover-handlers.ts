@@ -12,8 +12,12 @@ interface ContainerHandlersProps {
 }
 
 interface EditableFieldHandlersProps extends ContainerHandlersProps {
-  setHoveredField: (field: { taskId: string; field: 'title' | 'description' } | null) => void;
-  setHoveredSubtaskField: (field: { subtaskId: string; field: 'title' | 'description' } | null) => void;
+  setHoveredField: (
+    field: { taskId: string; field: 'title' | 'description' } | null
+  ) => void;
+  setHoveredSubtaskField: (
+    field: { subtaskId: string; field: 'title' | 'description' } | null
+  ) => void;
 }
 
 // Hook for task/subtask container hover
@@ -168,4 +172,3 @@ export function useClearHoverHandlers({
     [clearHoverState, restoreHover]
   );
 }
-

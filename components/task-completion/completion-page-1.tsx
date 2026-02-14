@@ -1,4 +1,10 @@
-import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ImageSourcePropType,
+} from 'react-native';
 import { useResponsive } from '@/hooks/ui/use-responsive';
 import { TASK_COMPLETION_STRINGS } from '@/constants/strings/task-completion';
 import type { ApiTaskResponse } from '@/types/tasks';
@@ -10,12 +16,17 @@ interface CompletionPage1Props {
   selectedImage: ImageSourcePropType;
 }
 
-export function CompletionPage1({ taskTitle, task, progress, selectedImage }: CompletionPage1Props) {
+export function CompletionPage1({
+  taskTitle,
+  task,
+  progress,
+  selectedImage,
+}: CompletionPage1Props) {
   const { width, isTablet, isDesktop } = useResponsive();
-  
+
   // Calculate responsive sizes based on screen dimensions
   const isSmallScreen = width < 375;
-  
+
   // Responsive image size (25-35% of screen width, with min/max constraints)
   const imageSize = Math.min(
     Math.max(
@@ -24,16 +35,46 @@ export function CompletionPage1({ taskTitle, task, progress, selectedImage }: Co
     ),
     isDesktop ? 240 : isTablet ? 220 : 200
   );
-  
+
   // Responsive font sizes
-  const wellDoneFontSize = isSmallScreen ? 28 : isDesktop ? 36 : isTablet ? 34 : 32;
-  const completedFontSize = isSmallScreen ? 14 : isDesktop ? 18 : isTablet ? 17 : 16;
-  const taskTitleFontSize = isSmallScreen ? 16 : isDesktop ? 20 : isTablet ? 19 : 18;
-  const progressFontSize = isSmallScreen ? 13 : isDesktop ? 16 : isTablet ? 15 : 14;
-  
+  const wellDoneFontSize = isSmallScreen
+    ? 28
+    : isDesktop
+      ? 36
+      : isTablet
+        ? 34
+        : 32;
+  const completedFontSize = isSmallScreen
+    ? 14
+    : isDesktop
+      ? 18
+      : isTablet
+        ? 17
+        : 16;
+  const taskTitleFontSize = isSmallScreen
+    ? 16
+    : isDesktop
+      ? 20
+      : isTablet
+        ? 19
+        : 18;
+  const progressFontSize = isSmallScreen
+    ? 13
+    : isDesktop
+      ? 16
+      : isTablet
+        ? 15
+        : 14;
+
   // Responsive spacing
-  const spacingMultiplier = isDesktop ? 1.3 : isTablet ? 1.2 : isSmallScreen ? 0.9 : 1;
-  
+  const spacingMultiplier = isDesktop
+    ? 1.3
+    : isTablet
+      ? 1.2
+      : isSmallScreen
+        ? 0.9
+        : 1;
+
   const dynamicStyles = {
     wellDoneText: {
       fontSize: wellDoneFontSize,
@@ -72,9 +113,9 @@ export function CompletionPage1({ taskTitle, task, progress, selectedImage }: Co
       </Text>
 
       {/* Task Title */}
-      <Text 
-        style={[styles.taskTitle, dynamicStyles.taskTitle]} 
-        numberOfLines={2} 
+      <Text
+        style={[styles.taskTitle, dynamicStyles.taskTitle]}
+        numberOfLines={2}
         ellipsizeMode="tail"
       >
         {taskTitle}
@@ -92,9 +133,9 @@ export function CompletionPage1({ taskTitle, task, progress, selectedImage }: Co
       {/* Progress Information */}
       <View style={styles.progressContainer}>
         {/* Project/context text in brackets */}
-        <Text 
-          style={[styles.projectText, dynamicStyles.projectText]} 
-          numberOfLines={1} 
+        <Text
+          style={[styles.projectText, dynamicStyles.projectText]}
+          numberOfLines={1}
           ellipsizeMode="tail"
         >
           {task?.title || taskTitle}

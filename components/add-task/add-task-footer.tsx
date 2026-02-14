@@ -6,7 +6,11 @@ interface AddTaskFooterProps {
   disabled?: boolean;
 }
 
-export function AddTaskFooter({ onSubmit, submitButtonText, disabled = false }: AddTaskFooterProps) {
+export function AddTaskFooter({
+  onSubmit,
+  submitButtonText,
+  disabled = false,
+}: AddTaskFooterProps) {
   const handlePress = () => {
     console.log('[AddTaskFooter] Submit button pressed');
     console.log('[AddTaskFooter] disabled:', disabled);
@@ -25,7 +29,12 @@ export function AddTaskFooter({ onSubmit, submitButtonText, disabled = false }: 
         onPress={handlePress}
         disabled={disabled}
       >
-        <Text style={[styles.submitBtnText, disabled && styles.submitBtnTextDisabled]}>
+        <Text
+          style={[
+            styles.submitBtnText,
+            disabled && styles.submitBtnTextDisabled,
+          ]}
+        >
           {submitButtonText}
         </Text>
       </TouchableOpacity>
@@ -59,4 +68,3 @@ const styles = StyleSheet.create({
     color: '#999',
   },
 });
-

@@ -11,7 +11,15 @@ interface TaskListProps {
   onTaskInfoPress?: (task: Task) => void;
 }
 
-export function TaskList({ tasks, columns, cardWidth, selectedTaskId, onTaskSelect, onTaskLongPress, onTaskInfoPress }: TaskListProps) {
+export function TaskList({
+  tasks,
+  columns,
+  cardWidth,
+  selectedTaskId,
+  onTaskSelect,
+  onTaskLongPress,
+  onTaskInfoPress,
+}: TaskListProps) {
   return (
     <View style={[styles.taskListContainer, styles.taskListContainerMasonry]}>
       {tasks.map((task, index) => {
@@ -29,8 +37,16 @@ export function TaskList({ tasks, columns, cardWidth, selectedTaskId, onTaskSele
             isRecommended={isRecommended}
             isSelected={isSelected}
             onPress={() => onTaskSelect(task.id)}
-            onLongPress={onTaskLongPress && task.reason ? () => onTaskLongPress(task) : undefined}
-            onInfoPress={onTaskInfoPress && task.reason ? () => onTaskInfoPress(task) : undefined}
+            onLongPress={
+              onTaskLongPress && task.reason
+                ? () => onTaskLongPress(task)
+                : undefined
+            }
+            onInfoPress={
+              onTaskInfoPress && task.reason
+                ? () => onTaskInfoPress(task)
+                : undefined
+            }
           />
         );
       })}
@@ -49,6 +65,3 @@ const styles = StyleSheet.create({
     // Always use masonry layout
   },
 });
-
-
-

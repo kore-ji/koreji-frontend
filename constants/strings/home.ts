@@ -17,4 +17,3 @@ const HOME_SCREEN_STRINGS = {
 
 export type HomeScreenStrings = typeof HOME_SCREEN_STRINGS;
 export { HOME_SCREEN_STRINGS };
-

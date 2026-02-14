@@ -16,4 +16,3 @@ if (existsSync(envPath)) {
 
 copyFileSync(examplePath, envPath);
 console.log('Created .env from .env.example');
-

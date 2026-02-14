@@ -58,7 +58,9 @@ export function buildSubtaskPayload(
   taskId?: string
 ): SubtaskPayload {
   const payload: SubtaskPayload = {
-    title: subtask.title.trim() || TASK_SCREEN_STRINGS.addTask.defaultUntitledSubtask,
+    title:
+      subtask.title.trim() ||
+      TASK_SCREEN_STRINGS.addTask.defaultUntitledSubtask,
     description: subtask.description.trim() || null,
     due_date: subtask.deadline ? formatDate(subtask.deadline) : null,
     status: mapStatusToBackend(subtask.status),

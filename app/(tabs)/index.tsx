@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, Pressable, View, Text, ActivityIndicator } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+  View,
+  Text,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecordFilters } from '@/hooks/use-record-filters';
@@ -11,12 +19,7 @@ const NO_SELECT = 'No select';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const {
-    headerTitle,
-    timeLabels,
-    filters,
-    actions,
-  } = HOME_SCREEN_STRINGS;
+  const { headerTitle, timeLabels, filters, actions } = HOME_SCREEN_STRINGS;
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(20);
 
@@ -73,7 +76,7 @@ export default function HomeScreen() {
   const handleRecommend = () => {
     const MAX_PLACE_LENGTH = 30;
     let placeValue: string = selectedPlace;
-    
+
     if (selectedPlace === 'Other' && customPlace.trim()) {
       // Validate and limit the custom place value before using it
       const trimmedPlace = customPlace.trim();
@@ -225,7 +228,12 @@ export default function HomeScreen() {
           onPress={handleRecommend}
           activeOpacity={0.8}
         >
-          <Ionicons name="play" size={20} color="#2196f3" style={styles.buttonIcon} />
+          <Ionicons
+            name="play"
+            size={20}
+            color="#2196f3"
+            style={styles.buttonIcon}
+          />
           <Text style={styles.actionButtonText}>{actions.recommendButton}</Text>
         </TouchableOpacity>
       </ScrollView>

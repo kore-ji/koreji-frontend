@@ -12,7 +12,11 @@ export function useTaskUpdate(
   tasks: TaskItem[],
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>
 ) {
-  const updateTaskField = async (id: string, field: keyof TaskItem, value: any) => {
+  const updateTaskField = async (
+    id: string,
+    field: keyof TaskItem,
+    value: any
+  ) => {
     const targetTask = tasks.find((t) => t.id === id);
     if (!targetTask) return;
 
@@ -52,13 +56,17 @@ export function useTaskUpdate(
 
     try {
       // Determine endpoint based on whether it's a subtask
-      const endpoint = isSubtask ? `/api/tasks/subtasks/${id}` : `/api/tasks/${id}`;
+      const endpoint = isSubtask
+        ? `/api/tasks/subtasks/${id}`
+        : `/api/tasks/${id}`;
 
       await patch(endpoint, payload);
 
       // Update local state optimistically
       setTasks((prevTasks) => {
-        let nextTasks = prevTasks.map((t) => (t.id === id ? { ...t, [field]: value } : t));
+        let nextTasks = prevTasks.map((t) =>
+          t.id === id ? { ...t, [field]: value } : t
+        );
 
         const shouldBumpParent =
           field === 'status' &&
@@ -67,10 +75,13 @@ export function useTaskUpdate(
           parentTask?.status === 'Not started';
 
         if (shouldBumpParent) {
-          nextTasks = nextTasks.map((t) => (t.id === parentId ? { ...t, status: 'In progress' } : t));
+          nextTasks = nextTasks.map((t) =>
+            t.id === parentId ? { ...t, status: 'In progress' } : t
+          );
         }
 
-        const shouldCompleteChildren = field === 'status' && (value === 'Done' || value === 'Archive');
+        const shouldCompleteChildren =
+          field === 'status' && (value === 'Done' || value === 'Archive');
 
         if (shouldCompleteChildren) {
           nextTasks = nextTasks.map((t) => {
@@ -80,7 +91,9 @@ export function useTaskUpdate(
               targetStatus === 'Archive'
                 ? t.status !== 'Archive' // archive all non-archived children (including Done)
                 : t.status === 'Not started' || t.status === 'In progress'; // only bump incomplete to Done
-            return isChild && shouldUpdateChild ? { ...t, status: targetStatus } : t;
+            return isChild && shouldUpdateChild
+              ? { ...t, status: targetStatus }
+              : t;
           });
         }
 
@@ -89,7 +102,10 @@ export function useTaskUpdate(
 
       console.log(`[Backend Update] Task ${id}: ${field} = ${value}`);
     } catch (error) {
-      console.error(`[Backend Update Failed] Task ${id}: ${field} = ${value}`, error);
+      console.error(
+        `[Backend Update Failed] Task ${id}: ${field} = ${value}`,
+        error
+      );
       // Optionally show error to user or revert optimistic update
       if (error instanceof ApiClientError) {
         // Could show an alert here

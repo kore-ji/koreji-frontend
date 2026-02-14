@@ -13,7 +13,13 @@ interface StatusPickerModalProps {
   onClose: () => void;
 }
 
-export function StatusPickerModal({ visible, taskId, tasks, onStatusChange, onClose }: StatusPickerModalProps) {
+export function StatusPickerModal({
+  visible,
+  taskId,
+  tasks,
+  onStatusChange,
+  onClose,
+}: StatusPickerModalProps) {
   const currentTask = taskId ? tasks.find((t) => t.id === taskId) : null;
   const currentStatus = currentTask?.status;
 
@@ -33,7 +39,11 @@ export function StatusPickerModal({ visible, taskId, tasks, onStatusChange, onCl
       accessibilityViewIsModal
       onRequestClose={onClose}
     >
-      <Pressable style={tasksStyles.modalOverlay} onPress={onClose} accessibilityLabel="Close modal">
+      <Pressable
+        style={tasksStyles.modalOverlay}
+        onPress={onClose}
+        accessibilityLabel="Close modal"
+      >
         <Pressable
           onPress={(e) => e.stopPropagation()}
           style={tasksStyles.modalContent}
@@ -59,7 +69,12 @@ export function StatusPickerModal({ visible, taskId, tasks, onStatusChange, onCl
                   ]}
                   onPress={() => handleStatusSelect(status)}
                 >
-                  <Text style={[tasksStyles.statusOptionText, { color: TASK_STATUS_COLORS[status].text }]}>
+                  <Text
+                    style={[
+                      tasksStyles.statusOptionText,
+                      { color: TASK_STATUS_COLORS[status].text },
+                    ]}
+                  >
                     {status}
                   </Text>
                 </TouchableOpacity>

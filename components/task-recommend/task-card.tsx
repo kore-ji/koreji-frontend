@@ -23,7 +23,16 @@ interface TaskCardProps {
   onInfoPress?: () => void;
 }
 
-export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, onPress, onLongPress, onInfoPress }: TaskCardProps) {
+export function TaskCard({
+  task,
+  width,
+  isLastInRow,
+  isRecommended,
+  isSelected,
+  onPress,
+  onLongPress,
+  onInfoPress,
+}: TaskCardProps) {
   const statusColors = TASK_STATUS_COLORS[task.status];
 
   return (
@@ -44,7 +53,12 @@ export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, 
       <View style={styles.taskCardTopRow}>
         <View style={styles.durationContainer}>
           {isRecommended && (
-            <Ionicons name="star" size={16} color="#FFA500" style={styles.recommendIcon} />
+            <Ionicons
+              name="star"
+              size={16}
+              color="#FFA500"
+              style={styles.recommendIcon}
+            />
           )}
           <Text style={styles.taskDuration}>{task.duration}min</Text>
         </View>
@@ -59,7 +73,11 @@ export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, 
               style={styles.infoButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="information-circle-outline" size={18} color="#666666" />
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color="#666666"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -72,7 +90,9 @@ export function TaskCard({ task, width, isLastInRow, isRecommended, isSelected, 
 
       {/* Bottom: Status Badge */}
       <View style={styles.taskBadgeContainer}>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+        <View
+          style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}
+        >
           <Text style={[styles.statusBadgeText, { color: statusColors.text }]}>
             {task.status}
           </Text>
@@ -156,6 +176,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
-
-

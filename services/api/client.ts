@@ -303,7 +303,9 @@ async function request<TResponse = unknown>(
   }
 
   // Normalize endpoint (ensure it starts with /)
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const normalizedEndpoint = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
   const url = `${baseUrl}${normalizedEndpoint}`;
 
   // Prepare request configuration
@@ -331,9 +333,10 @@ async function request<TResponse = unknown>(
     // Handle HTTP error responses (4xx, 5xx)
     if (!response.ok) {
       const errorData = await extractErrorData(response);
-      const errorMessage = errorData && typeof errorData === 'object' && 'message' in errorData
-        ? String(errorData.message)
-        : `API request failed: ${response.statusText || `HTTP ${response.status}`}`;
+      const errorMessage =
+        errorData && typeof errorData === 'object' && 'message' in errorData
+          ? String(errorData.message)
+          : `API request failed: ${response.statusText || `HTTP ${response.status}`}`;
 
       throw new ApiClientError(
         errorMessage,
@@ -431,11 +434,10 @@ export async function get<TResponse = unknown>(
  * const newUser = await post<User, CreateUserRequest>('/api/users', data, { signal });
  * ```
  */
-export async function post<TResponse = unknown, TBody extends JsonSerializable = JsonSerializable>(
-  endpoint: string,
-  body: TBody,
-  options?: RequestInit
-): Promise<TResponse> {
+export async function post<
+  TResponse = unknown,
+  TBody extends JsonSerializable = JsonSerializable,
+>(endpoint: string, body: TBody, options?: RequestInit): Promise<TResponse> {
   return request<TResponse>(endpoint, 'POST', body, options);
 }
 
@@ -460,11 +462,10 @@ export async function post<TResponse = unknown, TBody extends JsonSerializable =
  * const updatedUser = await put<User, UpdateUserRequest>('/api/users/123', data, { signal });
  * ```
  */
-export async function put<TResponse = unknown, TBody extends JsonSerializable = JsonSerializable>(
-  endpoint: string,
-  body: TBody,
-  options?: RequestInit
-): Promise<TResponse> {
+export async function put<
+  TResponse = unknown,
+  TBody extends JsonSerializable = JsonSerializable,
+>(endpoint: string, body: TBody, options?: RequestInit): Promise<TResponse> {
   return request<TResponse>(endpoint, 'PUT', body, options);
 }
 
@@ -489,11 +490,10 @@ export async function put<TResponse = unknown, TBody extends JsonSerializable = 
  * const updatedUser = await patch<User, UpdateUserRequest>('/api/users/123', data, { signal });
  * ```
  */
-export async function patch<TResponse = unknown, TBody extends JsonSerializable = JsonSerializable>(
-  endpoint: string,
-  body: TBody,
-  options?: RequestInit
-): Promise<TResponse> {
+export async function patch<
+  TResponse = unknown,
+  TBody extends JsonSerializable = JsonSerializable,
+>(endpoint: string, body: TBody, options?: RequestInit): Promise<TResponse> {
   return request<TResponse>(endpoint, 'PATCH', body, options);
 }
 
@@ -521,11 +521,9 @@ export async function patch<TResponse = unknown, TBody extends JsonSerializable 
  * await del('/api/users/123', undefined, { signal });
  * ```
  */
-export async function del<TResponse = unknown, TBody extends JsonSerializable = JsonSerializable>(
-  endpoint: string,
-  body?: TBody,
-  options?: RequestInit
-): Promise<TResponse> {
+export async function del<
+  TResponse = unknown,
+  TBody extends JsonSerializable = JsonSerializable,
+>(endpoint: string, body?: TBody, options?: RequestInit): Promise<TResponse> {
   return request<TResponse>(endpoint, 'DELETE', body, options);
 }
-

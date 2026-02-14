@@ -1,5 +1,13 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,11 +62,13 @@ export default function TaskProgressScreen() {
       // Use setTimeout to ensure DOM is ready
       const timeoutId = setTimeout(() => {
         try {
-          // @ts-ignore - web only: access native element
-          const element = containerRef.current?.nativeElement || containerRef.current;
-          if (element && typeof element.focus === 'function') {
-            element.focus();
-          }
+          const ref = containerRef.current as
+            | (View & { nativeElement?: { focus?: () => void } })
+            | null;
+          const element = (ref?.nativeElement ?? ref) as {
+            focus?: () => void;
+          } | null;
+          element?.focus?.();
         } catch {
           // Ignore focus errors
         }
@@ -70,8 +80,12 @@ export default function TaskProgressScreen() {
   const taskTitle = params.task_title || '';
   // Prefer scheduled time from params; fallback to task_duration if needed
   const durationMinutes =
-    (typeof params.time === 'string' && params.time ? Number(params.time) : undefined) ??
-    (typeof params.task_duration === 'string' && params.task_duration ? Number(params.task_duration) : Number.NaN);
+    (typeof params.time === 'string' && params.time
+      ? Number(params.time)
+      : undefined) ??
+    (typeof params.task_duration === 'string' && params.task_duration
+      ? Number(params.task_duration)
+      : Number.NaN);
 
   const handlePause = () => {
     if (timer.isRunning) {
@@ -85,14 +99,17 @@ export default function TaskProgressScreen() {
     // Capture elapsed time from timer before stopping
     const elapsedSeconds = timer.elapsedSeconds;
     timer.stop();
-    
+
     // Try to create a record only when we have a real backend task_id,
     // but always navigate to completion page even on failure.
     try {
       if (taskId) {
         const toolsArray =
           typeof params.tool === 'string' && params.tool
-            ? params.tool.split(',').map((t) => t.trim()).filter(Boolean)
+            ? params.tool
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
             : [];
 
         await post('/api/records/', {
@@ -104,7 +121,10 @@ export default function TaskProgressScreen() {
         });
       }
     } catch (error) {
-      console.error('[Task Progress] Failed to create record on completion', error);
+      console.error(
+        '[Task Progress] Failed to create record on completion',
+        error
+      );
     } finally {
       // Navigate to completion page with taskId and elapsed time from timer, even if record creation failed
       const completionParams: Record<string, string> = {
@@ -142,8 +162,8 @@ export default function TaskProgressScreen() {
   };
 
   return (
-    <SafeAreaView 
-      style={styles.container} 
+    <SafeAreaView
+      style={styles.container}
       edges={['top', 'bottom']}
       ref={containerRef}
       accessibilityViewIsModal={Platform.OS === 'web'}
@@ -200,13 +220,18 @@ export default function TaskProgressScreen() {
 
           {/* Scheduled Duration */}
           <Text style={styles.scheduledText}>
-            {TASK_PROGRESS_STRINGS.scheduledFor} {durationMinutes} {TASK_PROGRESS_STRINGS.minutes}
+            {TASK_PROGRESS_STRINGS.scheduledFor} {durationMinutes}{' '}
+            {TASK_PROGRESS_STRINGS.minutes}
           </Text>
 
           {/* Activity Indicator */}
           <View style={styles.indicatorContainer}>
             {timer.isRunning && (
-              <ActivityIndicator size="large" color="#333333" style={styles.activityIndicator} />
+              <ActivityIndicator
+                size="large"
+                color="#333333"
+                style={styles.activityIndicator}
+              />
             )}
           </View>
 
@@ -217,14 +242,18 @@ export default function TaskProgressScreen() {
               onPress={handlePause}
               disabled={!timer.isRunning && !timer.isPaused}
             >
-              <Text style={styles.pauseButtonText}>{TASK_PROGRESS_STRINGS.pause}</Text>
+              <Text style={styles.pauseButtonText}>
+                {TASK_PROGRESS_STRINGS.pause}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.button, styles.completeButton]}
               onPress={handleComplete}
             >
-              <Text style={styles.completeButtonText}>{TASK_PROGRESS_STRINGS.complete}</Text>
+              <Text style={styles.completeButtonText}>
+                {TASK_PROGRESS_STRINGS.complete}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -38,46 +38,55 @@ export function useRecordFilters() {
     try {
       // First, fetch all tag groups to find the ones we need
       const tagGroups = await get<TagGroupResponse[]>('/api/tasks/tag-groups');
-      
+
       if (!Array.isArray(tagGroups)) {
         throw new Error('Invalid tag groups response');
       }
 
       // Find the tag groups by name
-      const modeGroup = tagGroups.find(g => g.name === 'Mode');
-      const locationGroup = tagGroups.find(g => g.name === 'Location');
-      const toolsGroup = tagGroups.find(g => g.name === 'Tools');
+      const modeGroup = tagGroups.find((g) => g.name === 'Mode');
+      const locationGroup = tagGroups.find((g) => g.name === 'Location');
+      const toolsGroup = tagGroups.find((g) => g.name === 'Tools');
 
       // Fetch tags for each group using their IDs
       const fetchPromises: Promise<TagResponse[]>[] = [];
-      
+
       if (modeGroup) {
-        fetchPromises.push(get<TagResponse[]>(`/api/tasks/tag-groups/${modeGroup.id}/tags`));
+        fetchPromises.push(
+          get<TagResponse[]>(`/api/tasks/tag-groups/${modeGroup.id}/tags`)
+        );
       } else {
         fetchPromises.push(Promise.resolve([]));
       }
 
       if (locationGroup) {
-        fetchPromises.push(get<TagResponse[]>(`/api/tasks/tag-groups/${locationGroup.id}/tags`));
+        fetchPromises.push(
+          get<TagResponse[]>(`/api/tasks/tag-groups/${locationGroup.id}/tags`)
+        );
       } else {
         fetchPromises.push(Promise.resolve([]));
       }
 
       if (toolsGroup) {
-        fetchPromises.push(get<TagResponse[]>(`/api/tasks/tag-groups/${toolsGroup.id}/tags`));
+        fetchPromises.push(
+          get<TagResponse[]>(`/api/tasks/tag-groups/${toolsGroup.id}/tags`)
+        );
       } else {
         fetchPromises.push(Promise.resolve([]));
       }
 
-      const [modesData, placesData, toolsData] = await Promise.all(fetchPromises);
-      
-      setModes(Array.isArray(modesData) ? modesData.map(t => t.name) : []);
-      setPlaces(Array.isArray(placesData) ? placesData.map(t => t.name) : []);
-      setTools(Array.isArray(toolsData) ? toolsData.map(t => t.name) : []);
+      const [modesData, placesData, toolsData] =
+        await Promise.all(fetchPromises);
+
+      setModes(Array.isArray(modesData) ? modesData.map((t) => t.name) : []);
+      setPlaces(Array.isArray(placesData) ? placesData.map((t) => t.name) : []);
+      setTools(Array.isArray(toolsData) ? toolsData.map((t) => t.name) : []);
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.type === ApiErrorType.CONFIG) {
-          setError('Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.');
+          setError(
+            'Missing API base URL. Set EXPO_PUBLIC_API_BASE_URL to your FastAPI server.'
+          );
         } else {
           setError(err.message);
         }

@@ -5,7 +5,9 @@ interface TaskRecommendDescriptionProps {
   totalMinutes: number;
 }
 
-export function TaskRecommendDescription({ totalMinutes }: TaskRecommendDescriptionProps) {
+export function TaskRecommendDescription({
+  totalMinutes,
+}: TaskRecommendDescriptionProps) {
   return (
     <View style={styles.descriptionContainer}>
       <Text style={styles.descriptionText}>
@@ -26,6 +28,3 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
-
-
-

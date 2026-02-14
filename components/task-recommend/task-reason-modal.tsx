@@ -1,4 +1,12 @@
-import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface TaskReasonModalProps {
@@ -8,7 +16,12 @@ interface TaskReasonModalProps {
   onClose: () => void;
 }
 
-export function TaskReasonModal({ visible, taskTitle, reason, onClose }: TaskReasonModalProps) {
+export function TaskReasonModal({
+  visible,
+  taskTitle,
+  reason,
+  onClose,
+}: TaskReasonModalProps) {
   if (!visible) return null;
 
   return (
@@ -27,14 +40,20 @@ export function TaskReasonModal({ visible, taskTitle, reason, onClose }: TaskRea
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{taskTitle}</Text>
-            <TouchableOpacity onPress={onClose} accessibilityLabel="Close modal">
+            <TouchableOpacity
+              onPress={onClose}
+              accessibilityLabel="Close modal"
+            >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.modalContent}>
             <Text style={styles.reasonLabel}>推薦原因</Text>
-            <ScrollView style={styles.reasonScrollView} showsVerticalScrollIndicator={true}>
+            <ScrollView
+              style={styles.reasonScrollView}
+              showsVerticalScrollIndicator={true}
+            >
               <Text style={styles.reasonText}>{reason}</Text>
             </ScrollView>
           </View>

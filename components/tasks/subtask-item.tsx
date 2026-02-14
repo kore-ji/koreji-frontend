@@ -16,7 +16,11 @@ interface SubtaskItemProps {
   isDescHovered: boolean;
   mouseHandlers: {
     container: (taskId: string | null, isSubtask: boolean) => any;
-    editableField: (taskId: string, field: 'title' | 'description', isSubtask: boolean) => any;
+    editableField: (
+      taskId: string,
+      field: 'title' | 'description',
+      isSubtask: boolean
+    ) => any;
     clearHover: (taskId: string, isSubtask: boolean) => any;
   };
   onStatusPress: () => void;
@@ -70,7 +74,9 @@ export function SubtaskItem({
                 textStyle={[
                   styles.subtaskText,
                   subStatusComplete && styles.completedText,
-                  isTitleHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                  isTitleHovered &&
+                    Platform.OS === 'web' &&
+                    styles.editableFieldHovered,
                 ]}
                 onSave={(val) => onUpdateField(subtask.id, 'title', val)}
               />
@@ -82,10 +88,14 @@ export function SubtaskItem({
           >
             <EditableField
               value={subtask.description}
-              placeholder={TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder}
+              placeholder={
+                TASK_SCREEN_STRINGS.tasksList.noDescriptionPlaceholder
+              }
               textStyle={[
                 styles.subtaskDesc,
-                isDescHovered && Platform.OS === 'web' && styles.editableFieldHovered,
+                isDescHovered &&
+                  Platform.OS === 'web' &&
+                  styles.editableFieldHovered,
               ]}
               onSave={(val) => onUpdateField(subtask.id, 'description', val)}
             />
@@ -96,7 +106,9 @@ export function SubtaskItem({
               style={styles.subtaskTagsContainer}
               {...mouseHandlers.clearHover(subtask.id, true)}
             >
-              <Text style={styles.tagsLabel}>{TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}</Text>
+              <Text style={styles.tagsLabel}>
+                {TASK_SCREEN_STRINGS.addTask.subtaskTagsLabel}
+              </Text>
               <View style={styles.tagsRow}>
                 <TagDisplayRow
                   tags={buildSubtaskTagsFromTask(subtask)}
@@ -113,7 +125,9 @@ export function SubtaskItem({
               >
                 <Ionicons name="calendar-outline" size={14} color="#666" />
                 <Text style={styles.deadlineText}>
-                  {subtask.deadline ? formatDate(subtask.deadline) : 'Set deadline'}
+                  {subtask.deadline
+                    ? formatDate(subtask.deadline)
+                    : 'Set deadline'}
                 </Text>
               </TouchableOpacity>
               <View style={styles.subtaskTimeRow}>
@@ -123,9 +137,17 @@ export function SubtaskItem({
                   isNumeric
                   textStyle={styles.tagTime}
                   containerStyle={styles.timeTagContainer}
-                  onSave={(val) => onUpdateField(subtask.id, 'estimatedTime', parseInt(val) || 0)}
+                  onSave={(val) =>
+                    onUpdateField(
+                      subtask.id,
+                      'estimatedTime',
+                      parseInt(val) || 0
+                    )
+                  }
                 />
-                <Text style={styles.tagUnit}>{TASK_SCREEN_STRINGS.tasksList.timeUnit}</Text>
+                <Text style={styles.tagUnit}>
+                  {TASK_SCREEN_STRINGS.tasksList.timeUnit}
+                </Text>
               </View>
             </View>
           </View>

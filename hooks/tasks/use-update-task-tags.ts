@@ -17,9 +17,12 @@ export function useUpdateTaskTags() {
     setLoading(true);
     setError(null);
     try {
-      const updatedTask = await put<ApiTaskResponse>(`/api/tasks/${taskId}/tags`, {
-        tag_ids: tagIds,
-      });
+      const updatedTask = await put<ApiTaskResponse>(
+        `/api/tasks/${taskId}/tags`,
+        {
+          tag_ids: tagIds,
+        }
+      );
       return updatedTask;
     } catch (err) {
       let errorMessage = 'Failed to update task tags.';

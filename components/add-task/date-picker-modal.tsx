@@ -1,4 +1,14 @@
-import { Modal, View, Text, TouchableOpacity, Platform, StyleSheet, useWindowDimensions, ViewStyle, TextStyle } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { formatDate } from '@/utils/formatting/date';
 import { MOBILE_MAX, TABLET_MAX } from '@/constants/breakpoints';
@@ -57,7 +67,10 @@ export function DatePickerModal({
           activeOpacity={1}
           onPress={onCancel}
         >
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={containerStyle}>
               <View style={styles.datePickerActions}>
                 <TouchableOpacity onPress={onCancel}>
@@ -102,7 +115,10 @@ export function DatePickerModal({
           activeOpacity={1}
           onPress={onCancel}
         >
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={containerStyle}>
               <View style={styles.datePickerActions}>
                 <TouchableOpacity onPress={onCancel}>
@@ -259,4 +275,3 @@ const styles = StyleSheet.create({
     cursor: 'pointer',
   } as any, // Web-specific CSS properties for native input element
 });
-

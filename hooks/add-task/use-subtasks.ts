@@ -9,7 +9,9 @@ import { DEFAULT_TASK_STATUS } from '@/constants/task-status';
  */
 export function useSubtasks() {
   const [subtasks, setSubtasks] = useState<LocalSubTask[]>([]);
-  const [subtaskDatePickers, setSubtaskDatePickers] = useState<{ [id: string]: boolean }>({});
+  const [subtaskDatePickers, setSubtaskDatePickers] = useState<{
+    [id: string]: boolean;
+  }>({});
 
   const addSubtask = () => {
     const newSub: LocalSubTask = {
@@ -24,8 +26,14 @@ export function useSubtasks() {
     setSubtasks((prev) => [...prev, newSub]);
   };
 
-  const updateSubtask = (id: string, field: keyof LocalSubTask, value: string | Date | null | TaskStatus) => {
-    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  const updateSubtask = (
+    id: string,
+    field: keyof LocalSubTask,
+    value: string | Date | null | TaskStatus
+  ) => {
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
   };
 
   const removeSubtask = (id: string) => {
@@ -40,7 +48,11 @@ export function useSubtasks() {
     setSubtaskDatePickers((prev) => ({ ...prev, [subtaskId]: false }));
   };
 
-  const handleSubtaskDateChange = (subtaskId: string, event: any, selectedDate?: Date) => {
+  const handleSubtaskDateChange = (
+    subtaskId: string,
+    event: any,
+    selectedDate?: Date
+  ) => {
     if (Platform.OS === 'android') {
       if (event.type === 'set' && selectedDate) {
         updateSubtask(subtaskId, 'deadline', selectedDate);

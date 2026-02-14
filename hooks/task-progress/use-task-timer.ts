@@ -27,7 +27,7 @@ export function useTaskTimer(): UseTaskTimerReturn {
 
   const start = useCallback(() => {
     if (isRunning) return;
-    
+
     clearTimerInterval();
     startTimeRef.current = Date.now() - pausedTimeRef.current * 1000;
     setIsRunning(true);
@@ -48,7 +48,7 @@ export function useTaskTimer(): UseTaskTimerReturn {
 
   const pause = useCallback(() => {
     if (!isRunning || isPaused) return;
-    
+
     clearTimerInterval();
     pausedTimeRef.current = elapsedSeconds;
     setIsRunning(false);
@@ -57,7 +57,7 @@ export function useTaskTimer(): UseTaskTimerReturn {
 
   const resume = useCallback(() => {
     if (!isPaused || isRunning) return;
-    
+
     start();
   }, [isPaused, isRunning, start]);
 

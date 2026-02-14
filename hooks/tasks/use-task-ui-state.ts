@@ -6,11 +6,23 @@ import { Platform } from 'react-native';
  */
 export function useTaskUIState() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [statusPickerVisible, setStatusPickerVisible] = useState<string | null>(null);
-  const [statusPickerTaskId, setStatusPickerTaskId] = useState<string | null>(null);
-  const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>({});
-  const [hoveredField, setHoveredField] = useState<{ taskId: string; field: 'title' | 'description' } | null>(null);
-  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{ subtaskId: string; field: 'title' | 'description' } | null>(null);
+  const [statusPickerVisible, setStatusPickerVisible] = useState<string | null>(
+    null
+  );
+  const [statusPickerTaskId, setStatusPickerTaskId] = useState<string | null>(
+    null
+  );
+  const [datePickers, setDatePickers] = useState<{ [taskId: string]: boolean }>(
+    {}
+  );
+  const [hoveredField, setHoveredField] = useState<{
+    taskId: string;
+    field: 'title' | 'description';
+  } | null>(null);
+  const [hoveredSubtaskField, setHoveredSubtaskField] = useState<{
+    subtaskId: string;
+    field: 'title' | 'description';
+  } | null>(null);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [hoveredSubtaskId, setHoveredSubtaskId] = useState<string | null>(null);
 

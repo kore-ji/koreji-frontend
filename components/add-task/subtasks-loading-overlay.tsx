@@ -7,14 +7,19 @@ interface SubtasksLoadingOverlayProps {
   message?: string;
 }
 
-export function SubtasksLoadingOverlay({ visible, message }: SubtasksLoadingOverlayProps) {
+export function SubtasksLoadingOverlay({
+  visible,
+  message,
+}: SubtasksLoadingOverlayProps) {
   if (!visible) return null;
 
   return (
     <View style={styles.overlay} pointerEvents="auto">
       <View style={styles.card}>
         <QuadrantRotate size={96} showLoadingText={false} />
-        <Text style={styles.message}>{message ?? 'Generating subtasks...'}</Text>
+        <Text style={styles.message}>
+          {message ?? 'Generating subtasks...'}
+        </Text>
         <Text style={styles.subMessage}>This may take a few seconds.</Text>
       </View>
     </View>
