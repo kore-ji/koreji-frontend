@@ -19,9 +19,12 @@ export interface TaskItem {
   id: string;
   icon: TaskIcon;
   title: string;
-  place?: TaskPlace;
-  mode?: TaskMode;
-  tools?: TaskTool[];
+  /** Place/Location from tags - accepts enum or backend tag string */
+  place?: TaskPlace | string;
+  /** Mode from tags - accepts enum or backend tag string */
+  mode?: TaskMode | string;
+  /** Tools from tags - accepts enum array or backend tag strings */
+  tools?: (TaskTool | string)[];
   workingTime?: number; // in minutes
 }
 
