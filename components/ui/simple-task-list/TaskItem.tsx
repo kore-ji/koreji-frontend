@@ -2,7 +2,11 @@ import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TaskItem as TaskItemType } from './types';
 import { getIconName } from './utils';
-import { TaskPlace as TaskPlaceEnum, TaskMode as TaskModeEnum, TaskTool as TaskToolEnum } from '@/constants/task-filters';
+import {
+  TaskPlace as TaskPlaceEnum,
+  TaskMode as TaskModeEnum,
+  TaskTool as TaskToolEnum,
+} from '@/constants/task-filters';
 
 interface TaskItemProps {
   item: TaskItemType;
@@ -39,7 +43,9 @@ export function TaskItem({ item, onPress }: TaskItemProps) {
     tags.push(item.mode);
   }
   if (item.tools && item.tools.length > 0) {
-    const validTools = item.tools.filter(tool => tool !== TaskToolEnum.NO_SELECT);
+    const validTools = item.tools.filter(
+      (tool) => tool !== TaskToolEnum.NO_SELECT
+    );
     if (validTools.length > 0) {
       tags.push(...validTools.slice(0, 2)); // Limit to 2 tools for display
     }
@@ -64,9 +70,7 @@ export function TaskItem({ item, onPress }: TaskItemProps) {
       </View>
       <View style={styles.rightSection}>
         {item.workingTime !== undefined && (
-          <Text style={styles.workingTime}>
-            {formatTime(item.workingTime)}
-          </Text>
+          <Text style={styles.workingTime}>{formatTime(item.workingTime)}</Text>
         )}
         <Pressable style={styles.actionButton} onPress={onPress}>
           <Ionicons name="play" size={20} color="#2196f3" />
@@ -141,4 +145,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

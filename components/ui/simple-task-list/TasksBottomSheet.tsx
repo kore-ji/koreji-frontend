@@ -34,7 +34,9 @@ export function TasksBottomSheet({ tasks = [] }: TasksBottomSheetProps) {
 
   // Animate based on expanded state
   const animatedHeight = useAnimatedStyle(() => {
-    const targetHeight = isExpandedShared.value ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+    const targetHeight = isExpandedShared.value
+      ? EXPANDED_HEIGHT
+      : COLLAPSED_HEIGHT;
     return {
       height: withTiming(targetHeight, {
         duration: 400,
@@ -51,11 +53,7 @@ export function TasksBottomSheet({ tasks = [] }: TasksBottomSheetProps) {
   return (
     <GestureHandlerRootView style={styles.gestureRoot}>
       <Animated.View
-        style={[
-          styles.container,
-          animatedHeight,
-          animatedTranslate,
-        ]}
+        style={[styles.container, animatedHeight, animatedTranslate]}
       >
         <GestureDetector gesture={panGesture}>
           <View style={styles.content}>
@@ -65,9 +63,7 @@ export function TasksBottomSheet({ tasks = [] }: TasksBottomSheetProps) {
               onPress={toggleExpanded}
             />
 
-            {isExpanded && (
-              <TasksList tasks={displayTasks} />
-            )}
+            {isExpanded && <TasksList tasks={displayTasks} />}
           </View>
         </GestureDetector>
       </Animated.View>
@@ -101,4 +97,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-

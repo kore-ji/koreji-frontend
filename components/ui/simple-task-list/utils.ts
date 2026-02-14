@@ -10,4 +10,3 @@ export const getIconName = (icon: TaskIcon): keyof typeof Ionicons.glyphMap => {
   };
   return iconMap[icon];
 };
-

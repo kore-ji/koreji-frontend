@@ -1,6 +1,10 @@
 import { StyleSheet, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, withTiming, SharedValue } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  SharedValue,
+} from 'react-native-reanimated';
 import { HEADER_HEIGHT } from './constants';
 
 interface TasksBottomSheetHeaderProps {
@@ -18,7 +22,9 @@ export function TasksBottomSheetHeader({
     return {
       transform: [
         {
-          rotate: withTiming(isExpanded.value ? '180deg' : '0deg', { duration: 150 }),
+          rotate: withTiming(isExpanded.value ? '180deg' : '0deg', {
+            duration: 150,
+          }),
         },
       ],
     };
@@ -55,4 +61,3 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
 });
-

@@ -49,4 +49,3 @@ export function usePanGesture({
 
   return panGesture;
 }
-

@@ -1,12 +1,7 @@
 // Placeholder task icons
-export const TASK_ICONS = [
-  'pencil',
-  'trash',
-  'mail',
-  'document',
-] as const;
+export const TASK_ICONS = ['pencil', 'trash', 'mail', 'document'] as const;
 
-export type TaskIcon = typeof TASK_ICONS[number];
+export type TaskIcon = (typeof TASK_ICONS)[number];
 
 export interface TaskItem {
   id: string;
@@ -17,4 +12,3 @@ export interface TaskItem {
 export interface TasksBottomSheetProps {
   tasks?: TaskItem[];
 }
-
