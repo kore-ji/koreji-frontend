@@ -65,9 +65,9 @@ export default function TaskProgressScreen() {
           const ref = containerRef.current as
             | (View & { nativeElement?: { focus?: () => void } })
             | null;
-          const element = (ref?.nativeElement ?? ref) as
-            | { focus?: () => void }
-            | null;
+          const element = (ref?.nativeElement ?? ref) as {
+            focus?: () => void;
+          } | null;
           element?.focus?.();
         } catch {
           // Ignore focus errors
