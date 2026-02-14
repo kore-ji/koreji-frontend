@@ -152,6 +152,7 @@ export function FilterDropdown<T extends string>({
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={styles.modalContent}
+            testID="filter-modal"
           >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} testID="filter-modal-title">

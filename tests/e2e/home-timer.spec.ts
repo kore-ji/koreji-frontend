@@ -111,17 +111,15 @@ test.describe('Home screen timer', () => {
     // Click and wait for the click to complete
     await placeDropdown.click();
 
-    // Wait for modal to appear by visible title text (more resilient than testID
-    // in CI where the modal portal may render testID inconsistently).
+    // Wait for modal to appear (container is reliable; title text used as fallback)
+    const modal = page.getByTestId('filter-modal');
     const expectedModalTitle = `Select ${HOME_SCREEN_STRINGS.filters.placeLabel}`;
-    const modalTitle = page.getByText(expectedModalTitle);
-    await expect(modalTitle).toBeVisible({ timeout: 15000 });
+    await expect(modal).toBeVisible({ timeout: 15000 });
+    await expect(modal.getByText(expectedModalTitle)).toBeVisible();
 
-    // Now wait for the "Other" option to be visible within the modal
-    const otherOption = page.getByText('Other');
+    // Select "Other" option within the modal to avoid matching other UI
+    const otherOption = modal.getByText('Other');
     await expect(otherOption).toBeVisible({ timeout: 5000 });
-
-    // Select "Other" option
     await otherOption.click();
 
     // Verify input field appears
@@ -161,7 +159,7 @@ test.describe('Home screen timer', () => {
     await doneButton.click();
 
     // Verify modal is closed - wait for it to disappear
-    await expect(modalTitle).not.toBeVisible({ timeout: 3000 });
+    await expect(modal).not.toBeVisible({ timeout: 3000 });
 
     // Verify the custom value is displayed in the dropdown
     await expect(placeDropdown).toContainText(textAtLimit);
