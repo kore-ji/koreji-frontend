@@ -14,7 +14,7 @@ export function SubtasksLoadingOverlay({
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay} pointerEvents="auto">
+    <View style={styles.overlay}>
       <View style={styles.card}>
         <QuadrantRotate size={96} showLoadingText={false} />
         <Text style={styles.message}>
@@ -33,6 +33,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     zIndex: 10,
+    pointerEvents: 'auto',
   },
   card: {
     paddingVertical: 24,
