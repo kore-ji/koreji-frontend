@@ -5,3 +5,4 @@ web-build/
 pnpm-lock.yaml
 tests/.playwright-output/
 playwright-report/
+.github/workflows/

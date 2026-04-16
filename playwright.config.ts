@@ -1,9 +1,11 @@
 import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
-import path from 'node:path';
+import path from 'path';
 
 const isCI = !!process.env.CI;
-const isPlaywrightCLI = process.argv.some((arg) => arg.includes('playwright'));
+const isPlaywrightCLI = process.argv.some((arg: string) =>
+  arg.includes('playwright')
+);
 const defaultBaseURL = 'http://localhost:8081';
 const envBaseURL = process.env.PLAYWRIGHT_BASE_URL;
 const baseURL = envBaseURL ?? defaultBaseURL;
