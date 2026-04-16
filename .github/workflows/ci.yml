@@ -21,7 +21,6 @@ env:
 jobs:
   format:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     permissions:
       contents: write
     steps:
@@ -47,16 +46,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Format with Prettier
+      - name: Format with Prettier (write)
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         run: pnpm exec prettier --write .
 
+      - name: Format with Prettier (check)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: pnpm exec prettier --check .
+
       - name: Commit and push formatted files
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "style: apply Prettier formatting"
 
   quality-checks:
     runs-on: ubuntu-latest
+    needs: format
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
