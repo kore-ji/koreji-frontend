@@ -13,9 +13,5 @@ export function useThemeColor(
   const theme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const colorFromProps = props[theme];
 
-  if (colorFromProps) {
-    return colorFromProps;
-  } else {
-    return Colors[theme][colorName];
-  }
+  return colorFromProps || Colors[theme][colorName];
 }
