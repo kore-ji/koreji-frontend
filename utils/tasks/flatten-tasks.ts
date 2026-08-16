@@ -23,10 +23,15 @@ export const flattenTasks = (
       // simple `{ [groupName]: string[] }` structure for the UI.
       tags: (() => {
         const groups: Record<string, string[]> = {};
+        type BackendTag = {
+          group_name?: string | null;
+          name?: string | null;
+        };
         if (Array.isArray(t.tags)) {
           t.tags.forEach((tag) => {
-            const groupName = (tag as any).group_name as string | undefined;
-            const tagName = (tag as any).name as string | undefined;
+            const backendTag = tag as BackendTag;
+            const groupName = backendTag.group_name ?? undefined;
+            const tagName = backendTag.name ?? undefined;
             if (!groupName || !tagName) return;
             if (!groups[groupName]) {
               groups[groupName] = [];
