@@ -41,7 +41,14 @@ export function getLayoutSizes(
       : 28;
   const listPadding = responsive.isMobile ? 16 : responsive.isTablet ? 24 : 32;
   const fabSize = responsive.isMobile ? 60 : responsive.isTablet ? 64 : 68;
-  const fabIconSize = responsive.isMobile ? 32 : responsive.isTablet ? 34 : 36;
+  let fabIconSize: number;
+  if (responsive.isMobile) {
+    fabIconSize = 32;
+  } else if (responsive.isTablet) {
+    fabIconSize = 34;
+  } else {
+    fabIconSize = 36;
+  }
   const fabPosition = {
     right: responsive.isDesktop ? 32 : 20,
     bottom: responsive.isDesktop ? 40 : 30,
