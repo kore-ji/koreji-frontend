@@ -13,6 +13,7 @@ export interface MainTaskPayload {
   status: string;
   estimated_minutes: number | null;
   priority: null;
+  [key: string]: unknown;
 }
 
 export interface SubtaskPayload {
@@ -23,6 +24,7 @@ export interface SubtaskPayload {
   estimated_minutes: number | null;
   priority: null;
   task_id?: string;
+  [key: string]: unknown;
 }
 
 /**
