@@ -120,8 +120,7 @@ type JsonSerializable =
   | null
   | undefined
   | JsonSerializable[]
-  | { readonly [key: string]: JsonSerializable | unknown }
-  | object; // Allow any object type (interfaces, classes, etc.)
+  | { readonly [key: string]: JsonSerializable | unknown }; // Structured object payloads
 
 /**
  * Safely stringifies a request body to JSON
