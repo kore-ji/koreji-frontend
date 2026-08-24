@@ -23,7 +23,7 @@
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-navigation/bottom-tabs": "^7.18.16",
     "@react-navigation/elements": "^2.9.38",
-    "@react-navigation/native": "^7.3.16",
+    "@react-navigation/native": "^7.3.17",
     "expo": "~57.0.13",
     "expo-constants": "~57.0.11",
     "expo-font": "~57.0.1",
