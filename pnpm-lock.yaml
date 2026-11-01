@@ -184,8 +184,8 @@ importers:
         specifier: ^15.1.1
         version: 15.1.1(expo-font@58.0.9)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@react-native-community/datetimepicker':
-        specifier: 9.2.1
-        version: 9.2.1(expo@58.0.17)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        specifier: 9.2.2
+        version: 9.2.2(expo@58.0.17)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@react-navigation/bottom-tabs':
         specifier: ^7.20.0
         version: 7.20.0(c71437e28826206f7ee84659b7d0312e)
@@ -1323,8 +1323,8 @@ packages:
       '@types/react':
         optional: true
 
-  '@react-native-community/datetimepicker@9.2.1':
-    resolution: {integrity: sha512-P2dir8EcPYuS6g7N/E4jImugB99h2+e1kzNX6Ihg+2T2v5IZ5dB+4afLisG6rdua4YZ1mADYCZ2iqI34sPjIKA==}
+  '@react-native-community/datetimepicker@9.2.2':
+    resolution: {integrity: sha512-0cZGrK61UZ8VxpKKV/lun/L/b5wKus55IhvqqdewUayHwIc73lrLI0l5CIlHw8tA0/yQEzHEMEdtHQglAD+hKA==}
     peerDependencies:
       expo: '>=52.0.0'
       react: '*'
@@ -5623,7 +5623,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@react-native-community/datetimepicker@9.2.1(expo@58.0.17)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
+  '@react-native-community/datetimepicker@9.2.2(expo@58.0.17)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
     dependencies:
       invariant: 2.2.4
       react: 19.3.0
