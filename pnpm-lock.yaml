@@ -272,8 +272,8 @@ importers:
         specifier: ~19.3.0
         version: 19.3.0
       '@unrs/resolver-binding-darwin-arm64':
-        specifier: 1.12.2
-        version: 1.12.2
+        specifier: 1.13.0
+        version: 1.13.0
       dotenv:
         specifier: ^18.0.8
         version: 18.0.8
@@ -1632,6 +1632,11 @@ packages:
 
   '@unrs/resolver-binding-darwin-arm64@1.12.2':
     resolution: {integrity: sha512-u9DiNT1auQMO20A9SyTuG3wUgQWB9Z7KjAg0uFuCDR1FsAY8A0CG2S6JpHS1xwm/w1G08bjXZDcyOCjv1WAm2w==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@unrs/resolver-binding-darwin-arm64@1.13.0':
+    resolution: {integrity: sha512-yynnnnJXUC99WeD1GfvuXPKsKNfvgzGYC2eRayFnUfsHVROjqrbFOkFQLZiSx1H8+PLy5BzU8vqyPyLqbRfeBQ==}
     cpu: [arm64]
     os: [darwin]
 
@@ -6090,7 +6095,10 @@ snapshots:
   '@unrs/resolver-binding-android-arm64@1.12.2':
     optional: true
 
-  '@unrs/resolver-binding-darwin-arm64@1.12.2': {}
+  '@unrs/resolver-binding-darwin-arm64@1.12.2':
+    optional: true
+
+  '@unrs/resolver-binding-darwin-arm64@1.13.0': {}
 
   '@unrs/resolver-binding-darwin-x64@1.12.2':
     optional: true
