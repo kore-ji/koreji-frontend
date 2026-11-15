@@ -22,7 +22,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-community/datetimepicker": "9.2.2",
     "@react-navigation/bottom-tabs": "^7.20.0",
-    "@react-navigation/elements": "^2.9.44",
+    "@react-navigation/elements": "^2.9.45",
     "@react-navigation/native": "^7.5.1",
     "expo": "~58.0.17",
     "expo-constants": "~57.0.22",
